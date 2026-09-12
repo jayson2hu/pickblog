@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CodePick L3 Reader Preview</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f4ef;
+      --paper: #fffdf8;
+      --paper-2: #f0ece2;
+      --ink: #1f2a2e;
+      --muted: #687579;
+      --line: #ddd8cc;
+      --accent: #1f7a68;
+      --amber: #b76a19;
+      --blue: #305f9f;
+      --danger: #a64b35;
+      --shadow: 0 14px 38px rgba(31, 42, 46, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.68;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input, select { font: inherit; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 272px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 253, 248, .88);
+      backdrop-filter: blur(14px);
+      padding: 28px 22px;
+    }
+
+    .brand {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 30px;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: var(--ink);
+      color: #fffdf8;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.28;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    nav {
+      display: grid;
+      gap: 4px;
+    }
+
+    nav a {
+      display: flex;
+      min-height: 36px;
+      align-items: center;
+      border-radius: 8px;
+      padding: 7px 10px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 680;
+    }
+
+    nav a.active,
+    nav a:hover {
+      background: #e3f0eb;
+      color: var(--accent);
+    }
+
+    .aside-note {
+      margin-top: 28px;
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    main {
+      padding: 42px min(6vw, 72px) 72px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 328px;
+      gap: 32px;
+      align-items: end;
+      min-height: 58vh;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 38px;
+      margin-bottom: 34px;
+    }
+
+    .kicker {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 820;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 880px;
+      margin: 10px 0 0;
+      font-size: clamp(38px, 6vw, 72px);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 790px;
+      margin: 20px 0 0;
+      color: var(--muted);
+      font-size: 19px;
+      line-height: 1.76;
+    }
+
+    .brief-card,
+    .pick-card,
+    .panel,
+    .signal,
+    .queue-row {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .brief-card {
+      padding: 18px;
+    }
+
+    .brief-card h2,
+    .panel h2 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.3;
+    }
+
+    .brief-card p,
+    .panel p,
+    .summary {
+      color: var(--muted);
+    }
+
+    .signals {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .signal {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      box-shadow: none;
+      padding: 12px;
+    }
+
+    .signal span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 680;
+    }
+
+    .signal b {
+      color: var(--ink);
+      font-size: 18px;
+    }
+
+    section {
+      padding: 30px 0 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.24;
+    }
+
+    .section-head p {
+      max-width: 520px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .feed {
+      display: grid;
+      gap: 14px;
+    }
+
+    .pick-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 172px;
+      gap: 22px;
+      padding: 20px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tag {
+      display: inline-flex;
+      min-height: 28px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 10px;
+      color: var(--muted);
+      background: rgba(255, 253, 248, .72);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .tag.source { color: var(--accent); border-color: #c9ded6; background: #edf7f3; }
+    .tag.warn { color: var(--amber); border-color: #ead4ad; background: #fff6e7; }
+
+    .pick-card h3 {
+      margin: 0;
+      font-size: 25px;
+      line-height: 1.22;
+    }
+
+    .summary {
+      margin: 12px 0 0;
+      font-size: 15px;
+      line-height: 1.72;
+    }
+
+    .scorebox {
+      display: grid;
+      align-content: space-between;
+      min-height: 150px;
+      border-radius: 8px;
+      background: var(--paper-2);
+      padding: 16px;
+    }
+
+    .score-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 780;
+      text-transform: uppercase;
+    }
+
+    .score {
+      margin-top: 4px;
+      color: var(--accent);
+      font-size: 44px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .score-detail {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: .92fr 1.08fr;
+      gap: 16px;
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffefa;
+      padding: 10px 12px;
+      color: var(--ink);
+    }
+
+    .button {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: 8px;
+      background: var(--ink);
+      color: #fffdf8;
+      padding: 9px 14px;
+      font-weight: 780;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffefa;
+      padding: 8px 11px;
+      font-size: 14px;
+      font-weight: 720;
+    }
+
+    .chip.active {
+      border-color: #c9ded6;
+      background: #e3f0eb;
+      color: var(--accent);
+    }
+
+    .queue {
+      display: grid;
+      gap: 10px;
+    }
+
+    .queue-row {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) 78px;
+      gap: 14px;
+      align-items: center;
+      box-shadow: none;
+      padding: 14px 16px;
+    }
+
+    .rank {
+      color: var(--amber);
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .queue-row b {
+      display: block;
+      line-height: 1.35;
+    }
+
+    .queue-row span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      aside {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .aside-note { display: none; }
+      .hero,
+      .pick-card,
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      main { padding: 26px 16px 48px; }
+      aside { padding: 20px 16px; }
+      nav { display: flex; overflow-x: auto; }
+      h1 { font-size: 38px; }
+      .lead { font-size: 16px; }
+      .section-head { display: grid; }
+      .queue-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <div class="mark">CP</div>
+        <div>
+          <strong>CodePick<br>L3 Reader</strong>
+          <span>Curated engineering reading, daily brief delivery, and API distribution.</span>
+        </div>
+      </div>
+      <nav aria-label="Preview sections">
+        <a class="active" href="#reader">Reader</a>
+        <a href="#feed">Public picks</a>
+        <a href="#workspace">Account</a>
+        <a href="#brief">Daily brief</a>
+      </nav>
+      <p class="aside-note">Preview direction: BestBlogs-style editorial tech, warm paper surface, quieter scoring, reading-first hierarchy.</p>
+    </aside>
+
+    <main>
+      <section class="hero" id="reader">
+        <div>
+          <div class="kicker">Reader Web</div>
+          <h1>Public picks for serious engineering readers</h1>
+          <p class="lead">CodePick turns completed L3 provider output into a calm reading surface: source context first, quality signals second, and just enough AI support to decide what deserves a deep read.</p>
+        </div>
+        <div class="brief-card">
+          <h2>Today&apos;s editorial signal</h2>
+          <p>Two completed picks are ready for public reading. The strongest item has high operational relevance and clear implementation depth.</p>
+          <div class="signals">
+            <div class="signal"><span>Deep-read candidate</span><b>92</b></div>
+            <div class="signal"><span>New sources added</span><b>4</b></div>
+            <div class="signal"><span>API contract</span><b>/v1</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="feed">
+        <div class="section-head">
+          <h2>Public picks</h2>
+          <p>Scan by source, topic, and confidence. Each row keeps the summary readable before exposing scoring details.</p>
+        </div>
+        <div class="feed">
+          <article class="pick-card">
+            <div>
+              <div class="meta">
+                <span class="tag source">CodePick Research</span>
+                <span class="tag">AI systems</span>
+                <span class="tag">2026/5/29</span>
+                <span class="tag warn">Deep read</span>
+              </div>
+              <h3>Async Python agents are getting cheaper to operate</h3>
+              <p class="summary">A practical look at queue-backed agent systems, retry boundaries, and cost controls for teams moving from demos into recurring workflows.</p>
+            </div>
+            <div class="scorebox">
+              <div>
+                <div class="score-label">Quality</div>
+                <div class="score">92</div>
+              </div>
+              <div class="score-detail">Novelty 84<br>Depth 88<br>Impact 89</div>
+            </div>
+          </article>
+
+          <article class="pick-card">
+            <div>
+              <div class="meta">
+                <span class="tag source">Engineering Notes</span>
+                <span class="tag">Backend</span>
+                <span class="tag">2026/5/28</span>
+              </div>
+              <h3>Postgres read models for product analytics</h3>
+              <p class="summary">How small teams can model event-derived product metrics in Postgres without introducing a separate warehouse too early.</p>
+            </div>
+            <div class="scorebox">
+              <div>
+                <div class="score-label">Quality</div>
+                <div class="score">87</div>
+              </div>
+              <div class="score-detail">Novelty 76<br>Depth 82<br>Impact 80</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="workspace">
+        <div class="section-head">
+          <h2>Account workspace</h2>
+          <p>Login, plan state, API keys, and onboarding are grouped as operating panels instead of a separate dashboard-heavy screen.</p>
+        </div>
+        <div class="workspace">
+          <div class="panel">
+            <h2>Session</h2>
+            <p class="summary">Local demo mode remains usable when the API is offline.</p>
+            <label class="field">Email<input value="dev@example.com" /></label>
+            <label class="field">Plan<select><option>Free</option><option>Pro</option></select></label>
+            <p style="margin-top:14px"><button class="button">Continue</button></p>
+          </div>
+          <div class="panel">
+            <h2>Interest onboarding</h2>
+            <p class="summary">Choose a compact set of topics to seed recommendations and daily brief routing.</p>
+            <div class="chips">
+              <span class="chip active">AI</span>
+              <span class="chip active">Backend</span>
+              <span class="chip active">Frontend</span>
+              <span class="chip active">Data</span>
+              <span class="chip active">Security</span>
+              <span class="chip">DevOps</span>
+              <span class="chip">Product</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="brief">
+        <div class="section-head">
+          <h2>Daily brief queue</h2>
+          <p>A morning digest should feel like editorial delivery: ranked, compact, and easy to finish.</p>
+        </div>
+        <div class="queue">
+          <div class="queue-row">
+            <div class="rank">#1</div>
+            <div><b>Async Python agents are getting cheaper to operate</b><span>Queue-backed agent systems and cost controls.</span></div>
+            <span class="tag">92</span>
+          </div>
+          <div class="queue-row">
+            <div class="rank">#2</div>
+            <div><b>Postgres read models for product analytics</b><span>Event-derived product metrics in Postgres.</span></div>
+            <span class="tag">87</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L3 应用与分发 · 详尽开发 Plan</title>
+<style>
+  :root{--bg:#f8f6fd;--card:#fff;--ink:#1a1726;--muted:#5b5470;--dim:#928aa6;--line:#e7e3f1;--acc:#7c3aed;--acc2:#6d28d9;--soft:#f1ebfe;--green:#0d9488;--gsoft:#e6f9f3;--blue:#2563eb;--bsoft:#e9f0fe;--amber:#c2730a;--asoft:#fff6e8;--violet:#7c3aed}
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7;font-size:14.5px}
+  a{color:var(--acc)}.wrap{display:grid;grid-template-columns:252px 1fr;max-width:1300px;margin:0 auto}
+  nav{position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 13px;border-right:1px solid var(--line);background:#fff}
+  nav .bk{display:inline-block;font-size:10px;font-weight:800;letter-spacing:1px;color:#fff;background:var(--acc);padding:3px 9px;border-radius:6px;margin-bottom:7px}
+  nav .brand{font-weight:800;font-size:14.5px}nav .sub{color:var(--dim);font-size:11px;margin-bottom:12px}
+  nav a{display:block;color:var(--muted);padding:5px 10px;border-radius:7px;font-size:12.3px}nav a:hover{background:var(--soft);color:var(--acc2);text-decoration:none}
+  nav .grp{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:12px 0 2px 10px}
+  main{padding:36px 50px 110px;min-width:0}
+  .tag{display:inline-block;background:var(--soft);color:var(--acc2);border:1px solid #d8c8fb;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:700;margin-bottom:12px}
+  h1{font-size:28px;line-height:1.25;margin:0 0 10px;font-weight:800}h1 em{font-style:normal;color:var(--acc)}
+  .lede{color:var(--muted);font-size:15.5px;max-width:830px}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.mt{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:11.5px;color:var(--muted)}.mt b{color:var(--ink)}
+  section{margin:34px 0;scroll-margin-top:12px}
+  h2{font-size:20px;margin:0 0 6px;font-weight:800;display:flex;align-items:center;gap:10px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+  h2 .x{background:var(--acc);color:#fff;min-width:25px;height:25px;padding:0 6px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+  h3{font-size:15px;margin:18px 0 7px}.note{color:var(--dim);font-size:12.3px;margin-bottom:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12.4px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f1ebfb;color:var(--ink);font-weight:700}td{color:var(--muted)}tr:last-child td{border-bottom:none}td strong{color:var(--ink)}
+  ul.clean{margin:7px 0;padding-left:18px}ul.clean li{margin:3px 0;color:var(--muted)}ul.clean li strong{color:var(--ink)}
+  code{background:#efecf6;padding:1.5px 6px;border-radius:5px;font-size:12px;color:var(--acc2);font-family:Consolas,monospace}
+  pre{background:#1a1530;border:1px solid var(--line);border-radius:11px;padding:14px 16px;overflow-x:auto;font-size:11.6px;line-height:1.5;color:#d3cae8;margin:11px 0}
+  pre .c{color:#7a6f98}pre .k{color:#c4b5fd}pre .s{color:#6ee7b7}pre .y{color:#fcd34d}
+  .feat{border:1px solid var(--line);border-radius:12px;margin:13px 0;overflow:hidden;background:#fff}
+  .feat .fh{display:flex;align-items:center;gap:10px;padding:11px 16px;background:#f4eefe;border-bottom:1px solid var(--line)}
+  .feat .fid{font-weight:800;color:var(--acc2);font-size:12.5px;background:#fff;border:1px solid #d8c8fb;padding:2px 8px;border-radius:6px;flex-shrink:0}
+  .feat .ft{font-weight:700;font-size:14.5px;color:var(--ink);flex:1}
+  .feat .eff{font-size:11px;color:var(--dim);background:#fff;border:1px solid var(--line);padding:2px 8px;border-radius:6px;flex-shrink:0}
+  .feat .fb{padding:13px 16px}.feat .fdesc{color:var(--muted);font-size:12.8px;margin:0 0 9px}
+  .lbl{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin:10px 0 5px;color:var(--acc2)}
+  .subtasks{list-style:none;padding:0;margin:0}.subtasks li{padding:4px 0 4px 26px;position:relative;font-size:12.8px;color:var(--muted)}
+  .subtasks li::before{content:"☐";position:absolute;left:2px;top:3px;color:var(--acc);font-size:14px}.subtasks li b{color:var(--ink)}
+  .box{border-radius:9px;padding:10px 13px;margin:6px 0;font-size:12.6px}.box.acc{background:var(--gsoft);border:1px solid #aee6d8}.box.acc b{color:#0f766e}
+  .box.test{background:var(--bsoft);border:1px solid #c3d6fb}.box.test b{color:#1d4ed8}
+  .callout{border-left:4px solid var(--acc);background:var(--soft);padding:11px 15px;border-radius:0 10px 10px 0;margin:12px 0;color:var(--muted)}.callout.amber{border-color:var(--amber);background:var(--asoft)}.callout.green{border-color:var(--green);background:var(--gsoft)}.callout b{color:var(--ink)}
+  .pri{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px}.p-must{background:#fde8ea;color:#b91c3a}.p-should{background:#fff0d9;color:#a4670a}.p-v2{background:#ede9fe;color:#6d28d9}
+  .foot{margin-top:46px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font-size:12px}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}nav{display:none}main{padding:22px 14px 60px}.grid2,.grid3{grid-template-columns:1fr}h1{font-size:22px}}
+  @media print{nav{display:none}.wrap{grid-template-columns:1fr}body{background:#fff}main{padding:0}.feat,.card{box-shadow:none;break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <span class="bk">LAYER 3</span>
+    <div class="brand">应用与分发 · 开发 Plan</div>
+    <div class="sub">详尽版 · 含验收与自测</div>
+    <a href="#about">说明与范围</a>
+    <a href="#parallel">并行开发与契约</a>
+    <a href="#sprints">里程碑</a>
+    <a href="#ddl">数据库 DDL</a>
+    <div class="grp">功能拆解</div>
+    <a href="#e0">E0 工程基建</a>
+    <a href="#e1">E1 输入+L2 stub</a>
+    <a href="#e2">E2 内容展示</a>
+    <a href="#e3">E3 账户与鉴权</a>
+    <a href="#e4">E4 个性化</a>
+    <a href="#e5">E5 AI 伴读</a>
+    <a href="#e6">E6 早报生成</a>
+    <a href="#e7">E7 商业化</a>
+    <a href="#e8">E8 Public API+MCP</a>
+    <a href="#e9">E9 i18n+SEO</a>
+    <div class="grp">质量</div>
+    <a href="#teststrategy">测试策略</a>
+    <a href="#dod">L3 总验收</a>
+  </nav>
+  <main>
+    <span class="tag">开发 Plan · L3 应用与分发 · 详尽版</span>
+    <h1>L3 应用与分发 — <em>详尽开发计划</em></h1>
+    <p class="lede">L3 是面向终端的产品集：Reader Web、Public API/MCP、Brief。消费 L2 的 COMPLETED 判断，做<b>体验、分发、商业化</b>。拆成 10 EPIC / ~32 小功能；前端 Next.js + 后端 FastAPI。可对 L2 stub 独立开发。</p>
+    <div class="meta">
+      <span class="mt">范围：<b>Reader+API+MCP+Brief+计费</b></span>
+      <span class="mt">EPIC：<b>10</b></span><span class="mt">小功能：<b>~32</b></span>
+      <span class="mt">预估：<b>~20 人日</b></span>
+      <span class="mt">栈：<b>Next.js · FastAPI · PG · Paddle/Stripe</b></span>
+    </div>
+
+    <section id="about">
+      <h2><span class="x">i</span>说明与范围</h2>
+      <div class="card"><p style="margin:0">仅覆盖 L3。消费 L2 的 COMPLETED 内容 + 评分 + 翻译，产出用户产品。<span class="pri p-must">MUST</span>=MVP，<span class="pri p-should">SHOULD</span>=V1，<span class="pri p-v2">V2</span>=后置。</p></div>
+    </section>
+
+    <section id="parallel">
+      <h2><span class="x">⇄</span>并行开发与契约</h2>
+      <div class="grid2">
+        <div class="card"><h3 style="margin-top:0">⬇ 输入契约（来自 L2，可 stub）</h3><ul class="clean"><li>只读 <code>COMPLETED</code> 内容 + <code>content_vertical_scores</code> + <code>content_translations</code></li><li>请求时调 L2 <code>recommend()</code> / <code>companion()</code></li><li><strong>standalone</strong>：StubContentReadProvider + fixtures</li></ul></div>
+        <div class="card"><h3 style="margin-top:0">⬆ 输出（终端）</h3><ul class="clean"><li>Reader Web 页面 · 早报邮件</li><li>Public API <code>/v1</code> + MCP 工具</li><li>北极星埋点：深度阅读闭环率</li></ul></div>
+      </div>
+      <div class="callout amber"><b>统一接缝：</b>L3 拥有 <code>users/subscriptions/interests/follows/reading_events/briefs/bookmarks/api_keys/api_usage_daily/companion_usage</code> 表，只读 L0–L2 内容/评分/翻译。集成时换 ContentReadProvider 为真 L2 + 接平台事件即可。</div>
+    </section>
+
+    <section id="sprints">
+      <h2><span class="x">▦</span>里程碑（5 Sprint）</h2>
+      <table>
+        <thead><tr><th>Sprint</th><th>目标</th><th>EPIC</th><th>预估</th></tr></thead>
+        <tbody>
+          <tr><td>L3-S1 骨架+展示</td><td>前后端骨架 + L2 stub + 公共精选/详情</td><td>E0·E1·E2</td><td>~5d</td></tr>
+          <tr><td>L3-S2 账户+个性化</td><td>登录鉴权 + 兴趣 + 我的早报展示 + 埋点</td><td>E3·E4</td><td>~5d</td></tr>
+          <tr><td>L3-S3 伴读+早报</td><td>AI 伴读 + 早报生成/邮件</td><td>E5·E6</td><td>~3.5d</td></tr>
+          <tr><td>L3-S4 商业化</td><td>Pro 门禁 + Paddle/Stripe 计费</td><td>E7</td><td>~2d</td></tr>
+          <tr><td>L3-S5 API+MCP+i18n</td><td>对外 API + MCP + i18n/SEO</td><td>E8·E9</td><td>~3.5d</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="ddl">
+      <h2><span class="x">▤</span>数据库 DDL（L3 拥有）</h2>
+      <pre>CREATE TABLE <span class="k">users</span>(id BIGSERIAL PK, email UNIQUE, nickname, locale, plan DEFAULT 'free', created_at);
+CREATE TABLE <span class="k">subscriptions</span>(user_id, plan, status, period_end, provider, provider_ref);
+CREATE TABLE <span class="k">user_interests</span>(user_id, tag_code, weight, PK(user_id,tag_code));
+CREATE TABLE <span class="k">user_follows</span>(user_id, target_type, target_id);
+CREATE TABLE <span class="k">reading_events</span>(id BIGSERIAL PK, user_id, content_id, type, ts);
+CREATE TABLE <span class="k">briefs</span>(id BIGSERIAL PK, user_id NULL, vertical_code, brief_date, items JSONB, channels JSONB, status);
+CREATE TABLE <span class="k">bookmarks</span>(user_id, content_id, note, highlights JSONB, PK(user_id,content_id));
+CREATE TABLE <span class="k">api_keys</span>(id BIGSERIAL PK, owner_user_id, key_hash UNIQUE, prefix, scopes TEXT[], rate_limit_rpm, daily_quota, status);
+CREATE TABLE <span class="k">api_usage_daily</span>(key_id, day, count, PK(key_id,day));
+CREATE TABLE <span class="k">companion_usage</span>(user_id, day, count, PK(user_id,day));</pre>
+    </section>
+
+    <section id="e0">
+      <h2><span class="x">E0</span>工程基建 <span class="pri p-must">MUST</span></h2>
+      <div class="feat"><div class="fh"><span class="fid">F0.1</span><span class="ft">reader-web 脚手架（Next.js）</span><span class="eff">1d</span></div><div class="fb">
+        <p class="fdesc">App Router + TS + Tailwind + i18n 框架 + 设计 token。</p>
+        <div class="box acc"><b>✓ 验收</b> 首页 SSR 渲染；中英切换占位可用</div>
+        <div class="box test"><b>⚙ 自测</b> Playwright/E2E：首页 200 + 语言切换</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F0.2</span><span class="ft">reader-api（FastAPI/JWT）骨架</span><span class="eff">0.5d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> /api 健康；JWT 中间件可用</div>
+        <div class="box test"><b>⚙ 自测</b> pytest：受保护路由未授权 401</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F0.3</span><span class="ft">public-api（/v1）骨架</span><span class="eff">0.5d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> /v1 独立前缀 + API Key 过滤器占位</div>
+        <div class="box test"><b>⚙ 自测</b> 无 key 请求 401</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F0.4</span><span class="ft">DB 迁移（L3 表）</span><span class="eff">1d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> 上面 9 张表迁移建出</div>
+        <div class="box test"><b>⚙ 自测</b> upgrade/downgrade 往返</div></div></div>
+    </section>
+
+    <section id="e1">
+      <h2><span class="x">E1</span>输入接入 + L2 stub <span class="pri p-must">MUST</span></h2>
+      <div class="feat"><div class="fh"><span class="fid">F1.1</span><span class="ft">ContentReadProvider 抽象</span><span class="eff">0.5d</span></div><div class="fb">
+        <p class="fdesc">读 COMPLETED 内容 + 评分 + 翻译，经接口屏蔽真 L2/stub。</p>
+        <div class="box acc"><b>✓ 验收</b> 业务只依赖接口</div>
+        <div class="box test"><b>⚙ 自测</b> stub 返回 fixture 断言可渲染</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F1.2</span><span class="ft">L2 stub + fixtures</span><span class="eff">0.5d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> 无真 L2 跑通 L3 展示</div>
+        <div class="box test"><b>⚙ 自测</b> 端到端 stub → 列表/详情</div></div></div>
+    </section>
+
+    <section id="e2">
+      <h2><span class="x">E2</span>内容展示 <span class="pri p-must">MUST</span></h2>
+      <div class="feat"><div class="fh"><span class="fid">F2.1</span><span class="ft">公共精选列表（SSR/SEO）</span><span class="eff">1d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> SSR 输出含内容；评分/来源/缩略图正确</div>
+        <div class="box test"><b>⚙ 自测</b> E2E 断言列表渲染 + SEO 标签存在</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F2.2</span><span class="ft">详情页 + 双语分析</span><span class="eff">1.5d</span></div><div class="fb">
+        <p class="fdesc">秒开读 base_analysis/scores/translations；中英切换。</p>
+        <div class="box acc"><b>✓ 验收</b> 摘要/观点/金句/六维分展示；语言切换正确</div>
+        <div class="box test"><b>⚙ 自测</b> E2E 断言字段渲染 + 翻译切换</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F2.3</span><span class="ft">统一列表（筛选/排序/分页）</span><span class="eff">1d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> 游标分页无重无漏；筛选/排序生效</div>
+        <div class="box test"><b>⚙ 自测</b> pytest：分页遍历断言总数</div></div></div>
+    </section>
+
+    <section id="e3">
+      <h2><span class="x">E3</span>账户与鉴权 <span class="pri p-must">MUST</span></h2>
+      <div class="feat"><div class="fh"><span class="fid">F3.1</span><span class="ft">注册/登录</span><span class="eff">1d</span></div><div class="fb">
+        <p class="fdesc">邮箱 + OAuth（GitHub/Google，面向海外开发者）。</p>
+        <div class="box acc"><b>✓ 验收</b> 注册登录闭环；会话持久</div>
+        <div class="box test"><b>⚙ 自测</b> E2E 登录流；pytest token 签发校验</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F3.2</span><span class="ft">门禁中间件 require_plan</span><span class="eff">1d</span></div><div class="fb">
+        <p class="fdesc">Free/Pro 门禁集中治理，不散落各入口。</p>
+        <div class="box acc"><b>✓ 验收</b> Pro 功能对 Free 拒绝；门禁单点</div>
+        <div class="box test"><b>⚙ 自测</b> pytest：Free 访问 Pro 路由 403</div></div></div>
+    </section>
+
+    <section id="e4">
+      <h2><span class="x">E4</span>个性化 <span class="pri p-should">SHOULD</span></h2>
+      <div class="feat"><div class="fh"><span class="fid">F4.1</span><span class="ft">冷启动兴趣标签</span><span class="eff">0.5d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> 新用户选 5-8 主题写 user_interests</div>
+        <div class="box test"><b>⚙ 自测</b> E2E 完成引导断言入库</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F4.2</span><span class="ft">我的早报展示</span><span class="eff">1d</span></div><div class="fb">
+        <p class="fdesc">读 briefs（由 E6 生成）或调 L2 recommend 渲染。</p>
+        <div class="box acc"><b>✓ 验收</b> 个人早报正确呈现；Pro 门禁</div>
+        <div class="box test"><b>⚙ 自测</b> stub 早报断言渲染</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F4.3</span><span class="ft">为你推荐展示</span><span class="eff">0.5d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> 调 L2 recommend 渲染推荐流</div>
+        <div class="box test"><b>⚙ 自测</b> stub recommend 断言列表</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F4.4</span><span class="ft">行为埋点</span><span class="eff">1d</span></div><div class="fb">
+        <p class="fdesc">点击/深读/收藏/不感兴趣 → reading_events；北极星统计。</p>
+        <div class="box acc"><b>✓ 验收</b> 行为入库；深度阅读闭环率可计算</div>
+        <div class="box test"><b>⚙ 自测</b> 模拟行为断言事件 + 指标</div></div></div>
+    </section>
+
+    <section id="e5">
+      <h2><span class="x">E5</span>AI 伴读 <span class="pri p-should">SHOULD</span></h2>
+      <div class="feat"><div class="fh"><span class="fid">F5.1</span><span class="ft">伴读 SSE（前端 + 代理 L2）</span><span class="eff">1d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> 详情页问答流式；reader-api 代理 L2 companion</div>
+        <div class="box test"><b>⚙ 自测</b> E2E 断言流式分块到达</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F5.2</span><span class="ft">伴读配额</span><span class="eff">0.5d</span></div><div class="fb">
+        <p class="fdesc">companion_usage 计数，Free 限量 / Pro 全量。</p>
+        <div class="box acc"><b>✓ 验收</b> Free 超额拦截；Pro 放行</div>
+        <div class="box test"><b>⚙ 自测</b> pytest：超额返回限额提示</div></div></div>
+    </section>
+
+    <section id="e6">
+      <h2><span class="x">E6</span>早报生成 <span class="pri p-must">MUST</span></h2>
+      <div class="feat"><div class="fh"><span class="fid">F6.1</span><span class="ft">公共早报 Job</span><span class="eff">1d</span></div><div class="fb">
+        <p class="fdesc">近 3 天 COMPLETED + 加权 + 历史去重 + 质量检查。</p>
+        <div class="box acc"><b>✓ 验收</b> 生成公共早报；去重生效</div>
+        <div class="box test"><b>⚙ 自测</b> pytest：构造内容断言早报项与去重</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F6.2</span><span class="ft">我的早报 Job</span><span class="eff">0.5d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> 逐 Pro 用户生成个人早报</div>
+        <div class="box test"><b>⚙ 自测</b> 模拟用户断言个性化差异</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F6.3</span><span class="ft">邮件投递</span><span class="eff">0.5d</span></div><div class="fb">
+        <p class="fdesc">Resend/SES 投递 + 打开追踪。</p>
+        <div class="box acc"><b>✓ 验收</b> 邮件发送成功；打开可统计</div>
+        <div class="box test"><b>⚙ 自测</b> mock 邮件服务断言调用</div></div></div>
+    </section>
+
+    <section id="e7">
+      <h2><span class="x">E7</span>商业化 <span class="pri p-must">MUST</span></h2>
+      <div class="feat"><div class="fh"><span class="fid">F7.1</span><span class="ft">Paddle/Stripe Checkout（USD）</span><span class="eff">1d</span></div><div class="fb">
+        <p class="fdesc">$8/月 · $79/年（早鸟 $4.9）；Paddle 作 MoR 处理全球税。</p>
+        <div class="box acc"><b>✓ 验收</b> 下单跳转支付；测试模式成功回流</div>
+        <div class="box test"><b>⚙ 自测</b> 沙箱下单断言订单创建</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F7.2</span><span class="ft">Webhook + 订阅同步</span><span class="eff">1d</span></div><div class="fb">
+        <p class="fdesc">验签 webhook → 更新 subscriptions/plan，门禁实时生效。</p>
+        <div class="box acc"><b>✓ 验收</b> 支付成功用户升 Pro；退订降级；验签拒伪造</div>
+        <div class="box test"><b>⚙ 自测</b> pytest：mock webhook 断言 plan 变更；坏签名拒绝</div></div></div>
+    </section>
+
+    <section id="e8">
+      <h2><span class="x">E8</span>Public API + MCP <span class="pri p-v2">V2</span></h2>
+      <div class="feat"><div class="fh"><span class="fid">F8.1</span><span class="ft">/v1 稳定原语</span><span class="eff">1d</span></div><div class="fb">
+        <p class="fdesc">today/search/items/trending/sources/verticals，字段裁剪。</p>
+        <div class="box acc"><b>✓ 验收</b> 只读 COMPLETED；响应含 quota；不泄漏内部字段</div>
+        <div class="box test"><b>⚙ 自测</b> 契约 schema 测试；分页断言</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F8.2</span><span class="ft">API Key + 限流 + 配额</span><span class="eff">1d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> 无效 key 401；超速/超额 429 带重置时间</div>
+        <div class="box test"><b>⚙ 自测</b> pytest：超速断言 429；配额耗尽断言拒绝</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F8.3</span><span class="ft">MCP Server</span><span class="eff">0.5d</span></div><div class="fb">
+        <p class="fdesc">封装 /v1 为 MCP 工具，<code>npx @codepick/mcp</code>。</p>
+        <div class="box acc"><b>✓ 验收</b> Claude/Cursor 配置后 today/search 工具可用</div>
+        <div class="box test"><b>⚙ 自测</b> MCP 客户端 mock 调用断言结构</div></div></div>
+    </section>
+
+    <section id="e9">
+      <h2><span class="x">E9</span>i18n + SEO <span class="pri p-should">SHOULD</span></h2>
+      <div class="feat"><div class="fh"><span class="fid">F9.1</span><span class="ft">中英 i18n</span><span class="eff">0.5d</span></div><div class="fb">
+        <div class="box acc"><b>✓ 验收</b> UI 全量中英；按 Accept-Language/用户偏好</div>
+        <div class="box test"><b>⚙ 自测</b> 缺翻译键检测</div></div></div>
+      <div class="feat"><div class="fh"><span class="fid">F9.2</span><span class="ft">SEO</span><span class="eff">0.5d</span></div><div class="fb">
+        <p class="fdesc">SSR + hreflang + 结构化数据 + sitemap。</p>
+        <div class="box acc"><b>✓ 验收</b> 详情页含 meta/OG/JSON-LD；sitemap 可访问</div>
+        <div class="box test"><b>⚙ 自测</b> 抓取断言 SEO 标签齐全</div></div></div>
+    </section>
+
+    <section id="teststrategy">
+      <h2><span class="x">✓</span>测试策略</h2>
+      <div class="grid3">
+        <div class="card"><h3 style="margin-top:0">后端单元/集成</h3><ul class="clean"><li>pytest：门禁、分页、配额、webhook 验签</li><li>真 PG（testcontainers）</li></ul></div>
+        <div class="card"><h3 style="margin-top:0">前端 E2E</h3><ul class="clean"><li>Playwright：登录/详情/伴读/支付（沙箱）</li><li>对 L2 stub 数据</li></ul></div>
+        <div class="card"><h3 style="margin-top:0">契约/SEO</h3><ul class="clean"><li>/v1 响应 schema 校验</li><li>SEO 标签断言</li></ul></div>
+      </div>
+    </section>
+
+    <section id="dod">
+      <h2><span class="x">★</span>L3 总验收（DoD）</h2>
+      <div class="card"><ul class="clean">
+        <li>用 L2 stub 独立端到端跑通（展示/账户/早报/伴读）</li>
+        <li>公共精选 + 详情双语正确；统一列表分页稳定</li>
+        <li>账户鉴权闭环；Pro 门禁集中、对 Free 正确拒绝</li>
+        <li>早报生成 + 邮件投递；行为埋点支撑北极星</li>
+        <li>Paddle/Stripe 计费闭环：升/降级正确、webhook 验签</li>
+        <li>（V2）/v1 原语 + Key/限流/配额 + MCP 可用</li>
+        <li>i18n 全覆盖、SEO 标签齐全；E2E + 后端测试 CI 全绿</li>
+      </ul></div>
+      <div class="callout green"><b>达成即：</b>L3 可独立交付。集成时换 ContentReadProvider 为真 L2、接事件、合并迁移、接真实支付。</div>
+    </section>
+
+    <div class="foot">L3 应用与分发 · 详尽开发 Plan · 10 EPIC / ~32 小功能 · 可对 L2 stub 独立开发 · CodePick 分层平台 · 2026-05-30</div>
+  </main>
+</div>
+</body>
+</html>

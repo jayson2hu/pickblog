@@ -1,0 +1,41 @@
+[project]
+name = "codepick-l3"
+version = "0.1.0"
+description = "CodePick L3 application and distribution layer"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn>=0.27",
+  "sqlalchemy>=2.0",
+  "pydantic>=2.6",
+  "pydantic[email]>=2.6",
+  "python-jose>=3.3",
+  "passlib[bcrypt]>=1.7",
+  "alembic>=1.13",
+  "psycopg[binary]>=3.1",
+  "arq>=0.26",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov>=5", "httpx>=0.26"]
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "services/shared", "reader_api" = "services/reader-api/reader_api", "public_api" = "services/public-api/public_api"}
+
+[tool.setuptools.packages.find]
+where = ["services/shared", "services/reader-api", "services/public-api"]
+include = ["codepick_l3*", "reader_api*", "public_api*"]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "services/shared",
+  "services/reader-api",
+  "services/public-api",
+  "workers/briefs",
+  "services/mcp-server",
+]
+testpaths = ["tests"]

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodePick L3 应用与分发 - 架构设计</title>
+  <style>
+    body{margin:0;background:#fbfbff;color:#171717;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;line-height:1.7}
+    main{max-width:1040px;margin:0 auto;padding:40px 24px 80px}
+    h1{font-size:30px;margin:0 0 12px}h2{font-size:21px;margin-top:34px;border-bottom:1px solid #ddd;padding-bottom:8px}
+    table{width:100%;border-collapse:collapse;margin:14px 0;background:#fff}th,td{border:1px solid #ddd;padding:10px;vertical-align:top;text-align:left}th{background:#eef2ff}
+    code{background:#eef2ff;padding:2px 6px;border-radius:4px}pre{background:#17172a;color:#eef2ff;padding:14px;border-radius:8px;overflow:auto}
+  </style>
+</head>
+<body>
+<main>
+  <h1>CodePick L3 应用与分发 - 架构设计</h1>
+  <p>本设计约束 L3 只做应用与分发，隔离内部用户服务和外部公开服务，并通过可替换 Provider 支持独立开发与最后联调。</p>
+
+  <h2>1. 服务拓扑</h2>
+  <pre>Next.js Reader Web
+  -> reader-api /api/*       JWT, user context, Pro gate
+  -> public-api /v1/*        API Key, quota, public field filter
+  -> mcp-server tools        same public filter as /v1
+
+reader-api / workers / public-api
+  -> ContentReadProvider     Stub by default, L2 HTTP in integration
+  -> L3Repository            in-memory dev or SQLAlchemy/PostgreSQL
+  -> BillingClient           sandbox by default, Paddle in production
+  -> EmailClient             mock by default, Resend/SES in production</pre>
+
+  <h2>2. 信任边界</h2>
+  <table>
+    <thead><tr><th>边界</th><th>鉴权</th><th>可见数据</th><th>禁止事项</th></tr></thead>
+    <tbody>
+      <tr><td>内部 <code>/api</code></td><td>JWT</td><td>用户资料、兴趣、关注、收藏、个人早报、伴读</td><td>不得用 API Key 进入用户态</td></tr>
+      <tr><td>外部 <code>/v1</code></td><td><code>X-API-Key</code> + RPM + 日配额</td><td>裁剪后的公开内容、分数、来源、垂类</td><td>不得泄漏推荐决策、隐私上下文、完整分析、翻译对象</td></tr>
+      <tr><td>MCP</td><td>工具进程边界</td><td>与 <code>/v1</code> 同一公开字段集合</td><td>不得绕过 Public API 的字段过滤语义</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. 领域模块</h2>
+  <table>
+    <thead><tr><th>模块</th><th>职责</th><th>当前路径</th></tr></thead>
+    <tbody>
+      <tr><td>Provider</td><td>封装 L2 读取契约，提供 stub 和 HTTP 实现</td><td><code>services/shared/codepick_l3/provider.py</code></td></tr>
+      <tr><td>Auth / Gate</td><td>JWT、当前用户解析、集中 <code>require_plan</code></td><td><code>auth.py</code>, <code>gating.py</code></td></tr>
+      <tr><td>Repository</td><td>L3 自有状态持久化接口、内存实现、SQLAlchemy 实现</td><td><code>repository.py</code></td></tr>
+      <tr><td>Billing</td><td>沙箱 checkout、Paddle checkout、webhook 验签</td><td><code>billing.py</code></td></tr>
+      <tr><td>Briefs / Workers</td><td>公共与个人早报生成、持久化、邮件投递、Arq 配置</td><td><code>briefs.py</code>, <code>workers/briefs/jobs.py</code></td></tr>
+      <tr><td>Usage</td><td>Public API API Key、RPM、日配额</td><td><code>usage.py</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. L3 表归属</h2>
+  <p>L3 只拥有以下表，并通过 Alembic 迁移维护：</p>
+  <pre>users
+subscriptions
+user_interests
+user_follows
+reading_events
+briefs
+bookmarks
+api_keys
+api_usage_daily
+companion_usage</pre>
+  <p>L0-L2 内容、评分、翻译表只读且不在 L3 迁移中创建。</p>
+
+  <h2>5. 运行时切换</h2>
+  <table>
+    <thead><tr><th>场景</th><th>配置</th><th>期望</th></tr></thead>
+    <tbody>
+      <tr><td>独立开发</td><td><code>L3_USE_STUB_L2=true</code>, <code>BILLING_ENVIRONMENT=sandbox</code>, <code>EMAIL_PROVIDER=mock</code></td><td>无真实 L2、支付、邮件账户也能跑通 smoke 和 E2E</td></tr>
+      <tr><td>L2 联调</td><td><code>L3_USE_STUB_L2=false</code>, <code>L2_BASE_URL</code>, <code>L2_API_KEY</code></td><td>仅 Provider 层切换，业务入口不改代码</td></tr>
+      <tr><td>生产支付</td><td><code>BILLING_ENVIRONMENT=production</code>, <code>PADDLE_CHECKOUT_BASE_URL</code></td><td>checkout URL 走 Paddle，webhook 仍验签后更新订阅</td></tr>
+      <tr><td>邮件投递</td><td><code>EMAIL_PROVIDER=resend</code> 或 <code>ses</code></td><td>个人早报投递使用真实 provider 配置</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. 验证策略</h2>
+  <ul>
+    <li>后端 pytest 覆盖鉴权、门禁、配额、webhook 验签、L2 切换、SQLAlchemy 状态、MCP 裁剪和价格币种。</li>
+    <li><code>scripts/l3_smoke.py</code> 作为 Sprint smoke，成功输出 <code>L3 PIPELINE: PASS</code>。</li>
+    <li>Reader Web 使用 Playwright 覆盖双语展示、详情 SEO、早报门禁、登录、本地伴读和沙箱结账。</li>
+    <li>CI 分 backend 与 reader-web 两个 job 执行 smoke、typecheck 和 E2E。</li>
+  </ul>
+</main>
+</body>
+</html>

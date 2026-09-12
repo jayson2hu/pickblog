@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="zh" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CodePick · 阅读器重设计预览</title>
+<style>
+  /* ============ Design tokens ============ */
+  :root {
+    --bg: #f7f8fa; --surface: #ffffff; --surface-2: #f1f3f7;
+    --ink: #0d1117; --ink-soft: #3a414c; --muted: #6b7280;
+    --line: #e6e9ef; --line-strong: #d4d9e2;
+    --accent: #4f46e5; --accent-2: #7c6df2; --accent-soft: #eef0ff;
+    --positive: #0f9d6b; --amber: #c2790b;
+    --radius: 16px; --radius-sm: 10px;
+    --shadow-sm: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+    --shadow-md: 0 8px 28px rgba(16,24,40,.10);
+    --shadow-lg: 0 24px 60px rgba(16,24,40,.16);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  [data-theme="dark"] {
+    --bg: #0b0d12; --surface: #14171e; --surface-2: #1b1f29;
+    --ink: #f3f5f9; --ink-soft: #c4cad6; --muted: #8b93a4;
+    --line: #232936; --line-strong: #2e3543;
+    --accent: #8b80ff; --accent-2: #a99bff; --accent-soft: #1d1f3a;
+    --positive: #34d399; --amber: #f0b252;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4); --shadow-md: 0 8px 28px rgba(0,0,0,.5); --shadow-lg: 0 24px 60px rgba(0,0,0,.6);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; line-height: 1.5; transition: background .3s ease, color .3s ease; }
+  a { color: inherit; text-decoration: none; cursor: pointer; }
+  button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  [hidden] { display: none !important; }
+
+  /* ============ Header ============ */
+  header.top { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: saturate(180%) blur(16px); border-bottom: 1px solid var(--line); }
+  .top-inner { display: flex; align-items: center; gap: 20px; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .logo { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 800; font-size: 15px; display: grid; place-items: center; letter-spacing: -.5px; box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent); }
+  .brand b { font-size: 17px; font-weight: 750; letter-spacing: -.2px; display: block; }
+  .brand span { font-size: 11.5px; color: var(--muted); font-weight: 500; }
+  nav.main { display: flex; gap: 4px; margin-left: 8px; }
+  nav.main a { padding: 8px 13px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--muted); transition: .15s; }
+  nav.main a:hover { color: var(--ink); background: var(--surface-2); }
+  nav.main a.active { color: var(--accent); background: var(--accent-soft); }
+  .top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .icon-btn { width: 38px; height: 38px; border-radius: 9px; display: grid; place-items: center; border: 1px solid var(--line); color: var(--ink-soft); transition: .15s; font-size: 15px; }
+  .icon-btn:hover { background: var(--surface-2); border-color: var(--line-strong); }
+  .pill-btn { padding: 9px 16px; border-radius: 10px; font-size: 14px; font-weight: 650; background: var(--ink); color: var(--surface); transition: .15s; }
+  .pill-btn:hover { opacity: .88; transform: translateY(-1px); }
+
+  /* ============ Page head ============ */
+  .page-head { padding: 40px 0 8px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .kicker { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
+  .kicker .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--positive); box-shadow: 0 0 0 3px color-mix(in srgb, var(--positive) 20%, transparent); }
+  h1.title { font-size: clamp(30px, 4vw, 44px); font-weight: 780; letter-spacing: -1px; margin: 12px 0 10px; line-height: 1.05; }
+  .subtitle { color: var(--muted); font-size: 16px; max-width: 560px; }
+  .metric-rail { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; min-width: 320px; }
+  .metric { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; box-shadow: var(--shadow-sm); }
+  .metric .lbl { font-size: 11px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .metric .val { font-size: 22px; font-weight: 780; margin-top: 4px; letter-spacing: -.5px; }
+  .metric .val small { font-size: 12px; font-weight: 600; color: var(--positive); margin-left: 4px; }
+
+  .layout { display: grid; grid-template-columns: 1fr 320px; gap: 28px; padding: 28px 0 64px; align-items: start; }
+
+  /* ============ Featured ============ */
+  .featured { position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-md); margin-bottom: 22px; cursor: pointer; transition: .18s; }
+  .featured:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+  .featured::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%); pointer-events: none; }
+  .feat-badge { position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); background: var(--accent-soft); padding: 5px 11px; border-radius: 999px; }
+  .feat-grid { position: relative; display: grid; grid-template-columns: 190px 1fr 140px; gap: 24px; margin-top: 16px; align-items: center; }
+  .feat-grid h2 { font-size: 27px; font-weight: 760; letter-spacing: -.6px; line-height: 1.18; margin: 0 0 12px; }
+  .feat-sum { color: var(--ink-soft); font-size: 15.5px; line-height: 1.65; margin: 0 0 16px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag { font-size: 12px; font-weight: 600; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 11px; display: inline-flex; align-items: center; gap: 5px; }
+  .tag.src { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft); }
+
+  .ring-wrap { display: grid; place-items: center; gap: 8px; }
+  .ring { --p: 92; --size: 132px; width: var(--size); height: var(--size); position: relative; }
+  .ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+  .ring .track { fill: none; stroke: var(--surface-2); stroke-width: 11; }
+  .ring .bar { fill: none; stroke: url(#grad); stroke-width: 11; stroke-linecap: round; stroke-dasharray: var(--c); stroke-dashoffset: calc(var(--c) - var(--c) * var(--p) / 100); transition: stroke-dashoffset .6s ease; }
+  .ring .num { position: absolute; inset: 0; display: grid; place-items: center; }
+  .ring .num b { font-size: 34px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+  .ring .num em { font-size: 11px; font-style: normal; color: var(--muted); font-weight: 650; text-transform: uppercase; }
+
+  .sec-head { display: flex; align-items: center; justify-content: space-between; margin: 6px 2px 14px; }
+  .sec-head h3 { font-size: 15px; font-weight: 720; letter-spacing: -.2px; margin: 0; }
+  .seg { display: inline-flex; background: var(--surface-2); border-radius: 9px; padding: 3px; gap: 2px; }
+  .seg button { font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 6px 12px; border-radius: 7px; transition: .15s; }
+  .seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+  /* ============ Thumbnail / cover ============ */
+  .thumb { position: relative; border-radius: 12px; overflow: hidden; display: grid; place-items: center; color: #fff; flex-shrink: 0; box-shadow: var(--shadow-sm); }
+  .thumb::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 28% 18%, rgba(255,255,255,.28), transparent 42%), radial-gradient(circle at 82% 92%, rgba(0,0,0,.18), transparent 46%); }
+  .thumb b { position: relative; font-weight: 850; letter-spacing: -1.5px; line-height: 1; }
+  .thumb .v { position: absolute; bottom: 8px; left: 8px; z-index: 1; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; background: rgba(0,0,0,.3); padding: 2px 8px; border-radius: 999px; backdrop-filter: blur(2px); }
+  .card .thumb { width: 104px; height: 104px; }
+  .card .thumb b { font-size: 30px; }
+  .thumb.mini { width: 58px; height: 58px; }
+  .thumb.mini b { font-size: 19px; }
+  .thumb.mini .v { display: none; }
+  .feat-cover { width: 100%; height: 100%; min-height: 160px; }
+  .feat-cover b { font-size: 46px; }
+  .cover-wide { width: 100%; height: 190px; border-radius: var(--radius); margin: 6px 0 18px; }
+  .cover-wide b { font-size: 60px; }
+  .cover-wide .v { bottom: 12px; left: 12px; font-size: 12px; padding: 4px 12px; }
+
+  /* ============ Cards ============ */
+  .cards { display: grid; gap: 12px; }
+  .card { display: grid; grid-template-columns: 104px 1fr auto; gap: 20px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; transition: .18s ease; box-shadow: var(--shadow-sm); cursor: pointer; }
+  .card:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .card .meta { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; flex-wrap: wrap; }
+  .card h4 { font-size: 19px; font-weight: 700; letter-spacing: -.3px; line-height: 1.3; margin: 0 0 7px; }
+  .card p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0; max-width: 620px; }
+  .card .bars { display: flex; gap: 9px; margin-top: 12px; }
+  .dim { display: flex; flex-direction: column; gap: 4px; min-width: 56px; }
+  .dim em { font-size: 10.5px; font-style: normal; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
+  .dim .meter { height: 5px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+  .dim .meter i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .score-chip { text-align: center; min-width: 76px; padding: 14px 10px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--line); }
+  .score-chip b { font-size: 30px; font-weight: 800; letter-spacing: -1px; line-height: 1; display: block; }
+  .score-chip em { font-size: 10.5px; font-style: normal; color: var(--muted); font-weight: 650; text-transform: uppercase; }
+  .score-chip.high b { color: var(--positive); }
+
+  /* ============ Sidebar ============ */
+  aside { display: grid; gap: 16px; position: sticky; top: 88px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-sm); }
+  .panel h5 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 14px; }
+  .brief { background: linear-gradient(150deg, var(--accent), var(--accent-2)); color: #fff; border: none; }
+  .brief h5 { color: rgba(255,255,255,.8); }
+  .brief .big { font-size: 21px; font-weight: 760; letter-spacing: -.4px; margin: 0 0 8px; }
+  .brief p { font-size: 13.5px; color: rgba(255,255,255,.85); margin: 0 0 16px; line-height: 1.55; }
+  .brief button { width: 100%; background: rgba(255,255,255,.16); color: #fff; padding: 11px; border-radius: 10px; font-weight: 650; font-size: 14px; backdrop-filter: blur(4px); transition: .15s; border: 1px solid rgba(255,255,255,.22); }
+  .brief button:hover { background: rgba(255,255,255,.26); }
+  .companion-row { display: flex; gap: 11px; align-items: flex-start; padding: 11px 0; border-top: 1px solid var(--line); }
+  .companion-row:first-of-type { border-top: none; padding-top: 0; }
+  .av { width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; display: grid; place-items: center; font-size: 14px; }
+  .av.ai { background: var(--accent-soft); color: var(--accent); }
+  .av.you { background: var(--surface-2); color: var(--ink-soft); }
+  .companion-row .txt { font-size: 13px; color: var(--ink-soft); line-height: 1.55; }
+  .ask { display: flex; gap: 8px; margin-top: 12px; padding: 8px 8px 8px 14px; border: 1px solid var(--line-strong); border-radius: 11px; align-items: center; }
+  .ask input { flex: 1; border: none; outline: none; background: none; font-size: 13.5px; color: var(--ink); }
+  .ask button { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: #fff; display: grid; place-items: center; }
+  .quota { font-size: 11.5px; color: var(--muted); margin-top: 9px; display: flex; align-items: center; gap: 6px; }
+  .quota .track { flex: 1; height: 4px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+  .quota .track i { display: block; height: 100%; background: var(--amber); transition: width .3s; }
+  .pro { border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); background: var(--accent-soft); }
+  .pro h5 { color: var(--accent); }
+  .pro ul { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 9px; }
+  .pro li { font-size: 13.5px; color: var(--ink-soft); display: flex; gap: 9px; align-items: center; }
+  .pro li::before { content: "✓"; color: var(--accent); font-weight: 800; font-size: 13px; }
+  .pro .price { font-size: 27px; font-weight: 800; letter-spacing: -.6px; }
+  .pro .price small { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .cta { width: 100%; margin-top: 14px; background: var(--accent); color: #fff; padding: 11px; border-radius: 10px; font-weight: 680; font-size: 14px; transition: .15s; }
+  .cta:hover { opacity: .9; }
+
+  /* ============ Detail view ============ */
+  .back { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600; color: var(--muted); margin: 28px 0 4px; padding: 7px 12px; border-radius: 9px; border: 1px solid var(--line); }
+  .back:hover { background: var(--surface-2); color: var(--ink); }
+  .detail-head { display: grid; grid-template-columns: 1fr 300px; gap: 26px; align-items: start; padding: 14px 0 24px; }
+  .detail-head h1 { font-size: clamp(26px,3.4vw,38px); font-weight: 770; letter-spacing: -.8px; line-height: 1.12; margin: 14px 0 14px; }
+  .detail-head .lead { color: var(--ink-soft); font-size: 16.5px; line-height: 1.7; }
+  .source-link { display: inline-flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 650; color: var(--accent); background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); padding: 9px 14px; border-radius: 10px; margin-top: 16px; transition: .15s; }
+  .source-link:hover { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+  .source-link .u { color: var(--muted); font-family: var(--mono); font-size: 12px; font-weight: 500; }
+  .source-link .arrow { margin-left: 2px; }
+  .decide { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow-sm); text-align: center; }
+  .decide .big { font-size: 56px; font-weight: 820; letter-spacing: -2px; line-height: 1; color: var(--positive); }
+  .decide .lbl { font-size: 12px; font-weight: 650; color: var(--muted); text-transform: uppercase; margin-top: 6px; }
+  .decide p { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 14px 0 0; }
+  .six { display: grid; grid-template-columns: repeat(6,1fr); gap: 10px; margin: 8px 0 30px; }
+  .six .cell { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 13px; box-shadow: var(--shadow-sm); }
+  .six .cell em { font-size: 11px; font-style: normal; color: var(--muted); font-weight: 650; text-transform: uppercase; }
+  .six .cell b { font-size: 24px; font-weight: 800; letter-spacing: -.5px; display: block; margin-top: 4px; }
+  .detail-body { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; padding-bottom: 60px; }
+  .vp { display: grid; gap: 12px; margin-top: 16px; }
+  .vp li { display: flex; gap: 13px; align-items: flex-start; background: var(--surface-2); border-radius: var(--radius-sm); padding: 14px 16px; list-style: none; }
+  .vp .n { width: 26px; height: 26px; border-radius: 7px; background: var(--surface); display: grid; place-items: center; font-weight: 800; font-size: 12px; color: var(--accent); flex-shrink: 0; box-shadow: var(--shadow-sm); }
+  .vp .t { font-size: 14.5px; line-height: 1.65; color: var(--ink-soft); }
+  .quote { border-left: 4px solid var(--accent); padding: 6px 0 6px 18px; font-size: 18px; font-weight: 650; line-height: 1.6; color: var(--ink); margin: 22px 0 0; }
+  .ai-verdict { display: flex; gap: 11px; align-items: flex-start; background: var(--accent-soft); border-radius: var(--radius-sm); padding: 13px 15px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.55; color: var(--ink-soft); }
+  .ai-verdict b { color: var(--accent); }
+  .actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
+  .act { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 10px; border: 1px solid var(--line-strong); font-size: 13.5px; font-weight: 600; color: var(--ink-soft); transition: .15s; }
+  .act:hover { background: var(--surface-2); }
+  .act.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+  /* generic page (brief / pricing / api) */
+  .stack { padding: 36px 0 70px; }
+  .brief-item { display: flex; gap: 16px; padding: 18px 0; border-top: 1px solid var(--line); }
+  .brief-item:first-child { border-top: none; }
+  .brief-item .rank { font-size: 22px; font-weight: 820; color: var(--accent); width: 34px; }
+  .brief-item h4 { margin: 0 0 5px; font-size: 17px; font-weight: 700; }
+  .brief-item p { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .price-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 24px; }
+  .price-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; box-shadow: var(--shadow-sm); }
+  .price-card.feat { border-color: var(--accent); box-shadow: var(--shadow-md); position: relative; }
+  .price-card.feat::after { content: "推荐"; position: absolute; top: 16px; right: 16px; font-size: 11px; font-weight: 700; color: #fff; background: var(--accent); padding: 4px 10px; border-radius: 999px; }
+  .price-card h3 { margin: 0 0 6px; font-size: 16px; }
+  .price-card .p { font-size: 40px; font-weight: 820; letter-spacing: -1.5px; }
+  .price-card .p small { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .price-card ul { list-style: none; padding: 0; margin: 18px 0; display: grid; gap: 10px; }
+  .price-card li { font-size: 14px; color: var(--ink-soft); display: flex; gap: 9px; }
+  .price-card li::before { content: "✓"; color: var(--positive); font-weight: 800; }
+  .keyrow { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px 18px; margin-top: 12px; box-shadow: var(--shadow-sm); }
+  .keyrow code { font-family: var(--mono); font-size: 13px; color: var(--ink-soft); background: var(--surface-2); padding: 6px 10px; border-radius: 7px; }
+  .keyrow .grow { flex: 1; }
+
+  /* pager */
+  .pager { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 22px; }
+  .pager button { min-width: 38px; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 13.5px; font-weight: 650; color: var(--ink-soft); background: var(--surface); transition: .15s; }
+  .pager button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .pager button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .pager button:disabled { opacity: .4; cursor: not-allowed; }
+  .pager .info { margin: 0 10px; font-size: 12.5px; color: var(--muted); }
+
+  /* usage chart (api page) */
+  .api-grid { display: grid; grid-template-columns: 1fr 300px; gap: 18px; align-items: start; margin-top: 12px; }
+  .chart { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding: 14px 4px 0; }
+  .chart .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; height: 100%; justify-content: flex-end; }
+  .chart .col .bar { width: 100%; max-width: 30px; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, var(--accent), var(--accent-2)); transition: .4s; }
+  .chart .col em { font-size: 10.5px; font-style: normal; color: var(--muted); font-weight: 600; }
+  .ringlet { --p: 0; width: 96px; height: 96px; position: relative; }
+  .ringlet svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+  .ringlet .t { fill: none; stroke: var(--surface-2); stroke-width: 9; }
+  .ringlet .b { fill: none; stroke: var(--amber); stroke-width: 9; stroke-linecap: round; stroke-dasharray: 264; stroke-dashoffset: calc(264 - 264 * var(--p) / 100); }
+  .ringlet .c { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .ringlet .c b { font-size: 20px; font-weight: 800; letter-spacing: -.5px; }
+  .ringlet .c em { font-size: 10px; font-style: normal; color: var(--muted); }
+  .codeblock { background: #0d1117; color: #c9d1d9; border-radius: var(--radius-sm); padding: 16px 18px; font-family: var(--mono); font-size: 12.5px; line-height: 1.7; overflow-x: auto; margin-top: 12px; }
+  .codeblock .k { color: #ff7b72; } .codeblock .s { color: #a5d6ff; } .codeblock .c { color: #8b949e; }
+
+  footer { border-top: 1px solid var(--line); padding: 26px 0; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer .mono { font-family: var(--mono); font-size: 12px; }
+  .note { max-width: 1200px; margin: 18px auto 0; padding: 12px 24px; color: var(--muted); font-size: 12.5px; }
+
+  /* modal */
+  .overlay { position: fixed; inset: 0; background: rgba(8,10,16,.5); backdrop-filter: blur(3px); display: grid; place-items: center; z-index: 100; padding: 20px; }
+  .modal { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-lg); }
+  .modal h3 { margin: 0 0 6px; font-size: 21px; font-weight: 760; letter-spacing: -.4px; }
+  .modal p { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
+  .modal label { font-size: 12px; font-weight: 650; color: var(--muted); text-transform: uppercase; }
+  .modal input { width: 100%; margin: 6px 0 16px; padding: 11px 13px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-2); font-size: 14px; color: var(--ink); outline: none; }
+  .modal input:focus { border-color: var(--accent); }
+  .modal .x { float: right; font-size: 20px; color: var(--muted); margin: -6px -6px 0 0; }
+
+  /* toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--surface); padding: 12px 20px; border-radius: 11px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-lg); opacity: 0; transition: .25s; z-index: 200; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 940px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { position: static; grid-template-columns: 1fr 1fr; display: grid; }
+    .feat-grid, .detail-head, .detail-body { grid-template-columns: 1fr; }
+    .ring-wrap { justify-self: start; }
+    .metric-rail { min-width: 0; width: 100%; }
+    .six { grid-template-columns: repeat(3,1fr); }
+    .price-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 620px) {
+    nav.main, .brand span { display: none; }
+    aside { grid-template-columns: 1fr; }
+    .card { grid-template-columns: 1fr; }
+    .card .bars { flex-wrap: wrap; }
+    .six { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <a class="brand" onclick="go('reader')">
+      <span class="logo">CP</span>
+      <span><b>CodePick</b><span>L3 Reader &amp; Distribution</span></span>
+    </a>
+    <nav class="main" id="nav">
+      <a data-view="reader" class="active" onclick="go('reader')">阅读</a>
+      <a data-view="brief" onclick="go('brief')">早报</a>
+      <a data-view="pricing" onclick="go('pricing')">订阅</a>
+      <a data-view="api" onclick="go('api')">API 密钥</a>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-btn" id="themeBtn" title="切换主题">◐</button>
+      <button class="icon-btn" id="langBtn" title="EN / 中文">文</button>
+      <a class="pill-btn" onclick="openLogin()">登录</a>
+    </div>
+  </div>
+</header>
+
+<!-- ============ READER (feed) ============ -->
+<div class="wrap" id="view-reader">
+  <div class="page-head">
+    <div>
+      <span class="kicker"><span class="dot"></span> 公共精选 · 仅 COMPLETED</span>
+      <h1 class="title" id="ph-title">今天值得读的工程内容</h1>
+      <p class="subtitle" id="ph-sub">由 L2 评分、L3 只读分发。每条都经过六维质量评估，附中英对照与 AI 伴读。</p>
+    </div>
+    <div class="metric-rail">
+      <div class="metric"><div class="lbl">北极星 · DRCL</div><div class="val">63%<small>▲ 4.2</small></div></div>
+      <div class="metric"><div class="lbl">今日精选</div><div class="val" id="m-count">12</div></div>
+      <div class="metric"><div class="lbl">Public API</div><div class="val">/v1</div></div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <article class="featured" id="featured"></article>
+      <div class="sec-head">
+        <h3>最新精选</h3>
+        <div class="seg" id="seg">
+          <button class="on" data-sort="rec">推荐</button>
+          <button data-sort="new">最新</button>
+          <button data-sort="score">最高分</button>
+        </div>
+      </div>
+      <div class="cards" id="cards"></div>
+      <div class="pager" id="pager"></div>
+    </div>
+
+    <aside>
+      <section class="panel brief">
+        <h5>每日早报</h5>
+        <div class="big">5 条精选，3 分钟读完</div>
+        <p>把今天最高信号的内容打包成一封早报，每天清晨送达你的收件箱。</p>
+        <button onclick="go('brief')">查看今日早报 →</button>
+      </section>
+      <section class="panel">
+        <h5>AI 伴读</h5>
+        <div id="chat">
+          <div class="companion-row"><span class="av ai">✦</span><span class="txt">从首页选一条精选，我可以帮你快速判断值不值得花时间读。</span></div>
+        </div>
+        <div class="ask">
+          <input id="askInput" placeholder="问点什么…" onkeydown="if(event.key==='Enter')sendAsk()" />
+          <button onclick="sendAsk()">↑</button>
+        </div>
+        <div class="quota"><span>Free 配额</span><span class="track"><i id="quotaBar" style="width:40%"></i></span><span id="quotaTxt">2 / 5</span></div>
+      </section>
+      <section class="panel pro">
+        <h5>升级 Pro</h5>
+        <ul><li>无限 AI 伴读</li><li>个性化早报</li><li>Public API 更高配额</li></ul>
+        <div class="price">$8<small> / 月</small></div>
+        <button class="cta" onclick="go('pricing')">解锁 Pro</button>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<!-- ============ DETAIL ============ -->
+<div class="wrap" id="view-detail" hidden></div>
+
+<!-- ============ BRIEF ============ -->
+<div class="wrap stack" id="view-brief" hidden>
+  <span class="kicker"><span class="dot"></span> 每日早报 · 2026-05-29</span>
+  <h1 class="title">今晨 5 条高信号</h1>
+  <p class="subtitle">按 DRCL 贡献排序，预计 3 分钟读完。</p>
+  <div style="margin-top:24px" id="briefList"></div>
+</div>
+
+<!-- ============ PRICING ============ -->
+<div class="wrap stack" id="view-pricing" hidden>
+  <span class="kicker"><span class="dot"></span> 订阅 · USD</span>
+  <h1 class="title">选择你的方案</h1>
+  <p class="subtitle">通过 Paddle 结算，支持月付 / 年付。Pro 解锁全部能力。</p>
+  <div class="price-grid">
+    <div class="price-card">
+      <h3>Free</h3><div class="p">$0</div>
+      <ul><li>公共精选无限读</li><li>AI 伴读 5 次 / 天</li><li>Public API 基础配额</li></ul>
+      <button class="cta" style="background:var(--ink-soft)" onclick="toast('当前即 Free 方案')">当前方案</button>
+    </div>
+    <div class="price-card feat">
+      <h3>Pro 月付</h3><div class="p">$8<small>/月</small></div>
+      <ul><li>无限 AI 伴读</li><li>个性化早报</li><li>API 更高 RPM / 日配额</li><li>无广告</li></ul>
+      <button class="cta" onclick="toast('已跳转 Paddle 结算（演示）')">升级 Pro</button>
+    </div>
+    <div class="price-card">
+      <h3>Pro 年付 · 早鸟</h3><div class="p">$72<small>/年</small></div>
+      <ul><li>含全部 Pro 能力</li><li>立省 25%</li><li>早鸟限时价</li></ul>
+      <button class="cta" onclick="toast('已跳转 Paddle 结算（演示）')">选择年付</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ API KEYS ============ -->
+<div class="wrap stack" id="view-api" hidden>
+  <span class="kicker"><span class="dot"></span> Public API · /v1 + MCP</span>
+  <h1 class="title">API 密钥</h1>
+  <p class="subtitle">用密钥访问只读的公共精选接口（仅 COMPLETED、仅公共字段）。可接入你的脚本、看板或 AI 智能体（MCP）。受 RPM 与每日配额限制，Pro 享更高额度。</p>
+
+  <div class="api-grid">
+    <!-- left: usage chart + code -->
+    <section class="panel">
+      <h5 style="display:flex;justify-content:space-between"><span>近 7 天调用量</span><span style="color:var(--accent)">5,310 次</span></h5>
+      <div class="chart" id="usageChart"></div>
+      <h5 style="margin-top:18px">调用示例</h5>
+      <div class="codeblock">
+<span class="c"># 拉取公共精选，分页参数 page / page_size</span>
+curl <span class="s">"https://api.codepick.dev/v1/picks?page=1&page_size=20"</span> \
+  -H <span class="s">"Authorization: Bearer cp_live_••••3f9a"</span>
+
+<span class="c"># 返回：仅公共字段（无 base_analysis / 用户数据）</span>
+{ <span class="k">"items"</span>: [ … ], <span class="k">"page"</span>: 1, <span class="k">"total"</span>: 248 }</div>
+    </section>
+
+    <!-- right: quota rings -->
+    <aside style="display:grid;gap:16px">
+      <section class="panel" style="text-align:center">
+        <h5>今日配额</h5>
+        <div style="display:flex;gap:18px;justify-content:center;margin-top:6px">
+          <div class="ringlet" style="--p:53">
+            <svg viewBox="0 0 96 96"><circle class="t" cx="48" cy="48" r="42"/><circle class="b" cx="48" cy="48" r="42"/></svg>
+            <div class="c"><div><b>53%</b><em>日额度</em></div></div>
+          </div>
+          <div class="ringlet" style="--p:30">
+            <svg viewBox="0 0 96 96"><circle class="t" cx="48" cy="48" r="42"/><circle class="b" cx="48" cy="48" r="42"/></svg>
+            <div class="c"><div><b>18</b><em>RPM/60</em></div></div>
+          </div>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted);margin:14px 0 0">Free 限 60 RPM / 1,000 次每日 · Pro 提升至 600 RPM / 50,000 次</p>
+      </section>
+      <section class="panel pro">
+        <h5>需要更高配额？</h5>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:0 0 14px">Pro 把 RPM 与日额度提升 10 倍，适合生产级集成。</p>
+        <button class="cta" onclick="go('pricing')">升级 Pro</button>
+      </section>
+    </aside>
+  </div>
+
+  <h5 class="panel" style="background:none;border:none;box-shadow:none;padding:18px 0 8px">你的密钥</h5>
+  <div>
+    <div class="keyrow"><code>cp_live_••••••••3f9a</code><span class="grow"></span><span class="tag src">read</span><span class="tag">RPM 60</span><span class="tag">今日 530 次</span><button class="act" onclick="toast('已复制（演示）')">复制</button><button class="act" onclick="toast('已撤销（演示）')">撤销</button></div>
+    <div class="keyrow"><code>cp_live_••••••••a18c</code><span class="grow"></span><span class="tag src">read</span><span class="tag">RPM 60</span><span class="tag">今日 12 次</span><button class="act" onclick="toast('已复制（演示）')">复制</button><button class="act" onclick="toast('已撤销（演示）')">撤销</button></div>
+  </div>
+  <button class="cta" style="max-width:220px;margin-top:20px" onclick="toast('已生成新密钥（演示）')">+ 生成新密钥</button>
+</div>
+
+<div class="wrap">
+  <footer>
+    <span>© 2026 CodePick · L3 Reader &amp; Distribution</span>
+    <span class="mono">stub-L2 · sandbox-billing · 106 tests passing</span>
+  </footer>
+</div>
+<p class="note">⚠️ 独立静态设计预览（mock 数据，未接 Reader API）。可点击：顶栏导航、精选卡片→详情、排序、阅读操作、AI 伴读、登录、主题/语言切换。</p>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ---------- mock feed (shape mirrors lib/api.ts) ---------- */
+  const feed = [
+    { id:"cp-001", featured:true, title:"异步 Python 智能体的运行成本正在下降", source:"CodePick Research", vertical:"ai", date:"2026-05-29", read:8,
+      summary:"一篇关于队列驱动智能体系统与成本控制的实践分析：队列驱动的智能体可以降低模型空转时间，并让延迟更可预测。",
+      scores:{ quality:92, novelty:84, relevance:91, depth:88, clarity:86, impact:89 },
+      viewpoints:["把非紧急任务批处理，错峰调用模型","持续衡量工具调用失败率，别只看延迟","把编排逻辑和评分逻辑拆开，各自独立扩缩容"],
+      quote:"更低成本的智能体，始于更好的队列。" },
+    { id:"cp-002", title:"用 SQLite 取代你的初创公司后端", source:"Highscalability", vertical:"infra", date:"2026-05-28", read:6,
+      summary:"为什么单文件数据库在 2026 年比你以为的更能扛——并发写入、备份与边缘部署的真实权衡。",
+      scores:{ quality:89, novelty:78, relevance:80, depth:90, clarity:88, impact:86 },
+      viewpoints:["WAL 模式让读写并发不再是瓶颈","单文件让备份与回滚变得极其简单","边缘场景下省去一整层网络往返"],
+      quote:"大多数初创公司的负载，一块 SSD 上的 SQLite 就够了。" },
+    { id:"cp-003", title:"类型系统能为你证明什么，又不能证明什么", source:"ACM Queue", vertical:"languages", date:"2026-05-27", read:11,
+      summary:"从依赖类型到 borrow checker，一篇克制而清醒的综述：静态保证的边界在哪里。",
+      scores:{ quality:86, novelty:72, relevance:75, depth:94, clarity:85, impact:80 },
+      viewpoints:["类型能消除一整类错误，但不能替代测试","表达力越强，类型推导成本越高","团队心智负担是真实的工程约束"],
+      quote:"类型是证明，不是承诺。" },
+    { id:"cp-004", title:"我们如何把 CI 从 40 分钟砍到 4 分钟", source:"Engineering Blog", vertical:"devops", date:"2026-05-26", read:7,
+      summary:"缓存分层、测试分片与远程执行的组合拳，以及那些看起来很美但没用的优化。",
+      scores:{ quality:84, novelty:65, relevance:88, depth:82, clarity:90, impact:91 },
+      viewpoints:["先测量再优化，别凭直觉砍流水线","测试分片的收益取决于最慢的那一片","远程缓存命中率才是真正的杠杆"],
+      quote:"CI 慢不是技术问题，是反馈循环问题。" },
+    { id:"cp-005", title:"向量数据库之后：检索的下一站", source:"CodePick Research", vertical:"ai", date:"2026-05-25", read:9,
+      summary:"混合检索、重排序与结构化过滤正在把“纯向量”推下王座，附可复现的基准。",
+      scores:{ quality:83, novelty:88, relevance:84, depth:79, clarity:81, impact:83 },
+      viewpoints:["纯向量召回在长尾查询上并不稳","结构化过滤 + 重排序显著提升精度","评测要贴近真实查询分布"],
+      quote:"检索的未来是混合的，而不是更大的向量。" },
+    { id:"cp-006", title:"为什么我们放弃了微服务，又没全回到单体", source:"Engineering Blog", vertical:"infra", date:"2026-05-24", read:10,
+      summary:"模块化单体（modular monolith）如何在团队规模和部署复杂度之间找到平衡点。",
+      scores:{ quality:82, novelty:70, relevance:86, depth:84, clarity:87, impact:80 },
+      viewpoints:["边界要按业务能力划，而不是按技术层","进程内调用省掉一整类分布式故障","真正需要独立扩缩容时再拆出去"],
+      quote:"先把边界画对，再决定要不要跨进程。" },
+    { id:"cp-007", title:"Rust 在生产环境的两年：值不值", source:"ACM Queue", vertical:"languages", date:"2026-05-23", read:13,
+      summary:"一支后端团队迁移到 Rust 后的真实数据：崩溃率、招聘成本与开发速度的权衡。",
+      scores:{ quality:81, novelty:68, relevance:78, depth:88, clarity:82, impact:79 },
+      viewpoints:["内存安全显著降低了线上 panic","编译期约束拖慢了早期迭代","招聘和上手曲线是真实成本"],
+      quote:"Rust 把 bug 从运行时搬到了编译时——代价是前移的认知负担。" },
+    { id:"cp-008", title:"可观测性不是更多日志，而是更好的问题", source:"Highscalability", vertical:"devops", date:"2026-05-22", read:8,
+      summary:"从指标、日志、追踪三件套，走向以“能回答什么问题”为导向的可观测性设计。",
+      scores:{ quality:80, novelty:74, relevance:83, depth:78, clarity:85, impact:82 },
+      viewpoints:["先想清楚要回答的问题再埋点","高基数标签是排障的关键","告警要绑定用户影响，而非单纯阈值"],
+      quote:"好的可观测性，是让你能问出还没预想到的问题。" },
+    { id:"cp-009", title:"前端构建工具的下一轮洗牌", source:"CodePick Research", vertical:"frontend", date:"2026-05-21", read:7,
+      summary:"原生 ESM、Rust 工具链与按需编译，正在重塑前端构建的性能基线。",
+      scores:{ quality:79, novelty:80, relevance:81, depth:74, clarity:83, impact:77 },
+      viewpoints:["冷启动速度成为新的竞争维度","Rust 工具链显著压低构建耗时","按需编译让大仓也能秒级启动"],
+      quote:"构建速度，正在重新成为前端的一等公民。" },
+    { id:"cp-010", title:"数据库索引设计的七个反直觉结论", source:"ACM Queue", vertical:"data", date:"2026-05-20", read:12,
+      summary:"复合索引顺序、覆盖索引与写放大之间的取舍，比直觉复杂得多。",
+      scores:{ quality:85, novelty:76, relevance:82, depth:91, clarity:80, impact:84 },
+      viewpoints:["复合索引顺序决定能否命中","覆盖索引省去回表但增大写成本","索引越多，写放大越严重"],
+      quote:"每加一个索引，都是在用写入换查询。" },
+    { id:"cp-011", title:"把 LLM 当编译器：结构化输出的工程化", source:"CodePick Research", vertical:"ai", date:"2026-05-19", read:9,
+      summary:"用约束解码与 schema 校验，把不确定的模型输出变成可依赖的程序接口。",
+      scores:{ quality:84, novelty:86, relevance:85, depth:80, clarity:82, impact:83 },
+      viewpoints:["约束解码把格式错误降到接近零","schema 即契约，便于上下游协作","失败要可重试且可观测"],
+      quote:"当输出可被校验，LLM 才真正能进生产链路。" },
+    { id:"cp-012", title:"团队为什么总在重写：技术债的真实账本", source:"Engineering Blog", vertical:"culture", date:"2026-05-18", read:11,
+      summary:"重写很少真正更快——除非你先弄清楚旧系统到底解决了哪些隐性需求。",
+      scores:{ quality:78, novelty:66, relevance:80, depth:79, clarity:88, impact:81 },
+      viewpoints:["旧系统的丑陋往往是需求的化石","增量重构通常优于推倒重来","重写要先复刻隐性约束"],
+      quote:"旧代码里每一处奇怪，都曾经修复过一个真实的 bug。" },
+  ];
+
+  const dimLabel = { quality:"质量", novelty:"新颖", relevance:"相关", depth:"深度", clarity:"清晰", impact:"影响" };
+  const miniDims = ["novelty","depth","impact","clarity"];
+
+  /* ---------- thumbnail (offline cover by source/vertical) ---------- */
+  const palette = {
+    ai:        ['#6366f1','#a855f7'], infra:     ['#0ea5e9','#14b8a6'],
+    languages: ['#f59e0b','#ef4444'], devops:    ['#3b82f6','#6366f1'],
+    frontend:  ['#ec4899','#f43f5e'], data:      ['#06b6d4','#3b82f6'],
+    culture:   ['#f59e0b','#f97316']
+  };
+  const pal = v => palette[v] || ['#64748b','#94a3b8'];
+  const initials = s => s.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const domains = { 'CodePick Research':'research.codepick.dev', 'Highscalability':'highscalability.com', 'ACM Queue':'queue.acm.org', 'Engineering Blog':'eng.example.com' };
+  const srcUrl = it => `https://${domains[it.source] || 'example.com'}/p/${it.id}`;
+  function thumb(it, cls){
+    const [a,b] = pal(it.vertical);
+    return `<div class="thumb ${cls||''}" style="background:linear-gradient(135deg,${a},${b})"><b>${initials(it.source)}</b><span class="v">${it.vertical}</span></div>`;
+  }
+
+  /* ---------- render reader ---------- */
+  function renderFeatured(){
+    const it = feed.find(f=>f.featured) || feed[0];
+    document.getElementById('featured').innerHTML = `
+      <span class="feat-badge">★ 今日头条精选</span>
+      <div class="feat-grid">
+        ${thumb(it,'feat-cover')}
+        <div>
+          <h2>${it.title}</h2>
+          <p class="feat-sum">${it.summary}</p>
+          <div class="tags">
+            <span class="tag src">◆ ${it.source}</span><span class="tag">${it.vertical}</span>
+            <span class="tag">${it.date}</span><span class="tag">${it.read} 分钟</span>
+          </div>
+        </div>
+        <div class="ring-wrap">
+          <div class="ring" style="--p:${it.scores.quality}; --c:380">
+            <svg viewBox="0 0 132 132">
+              <defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/>
+              </linearGradient></defs>
+              <circle class="track" cx="66" cy="66" r="60.5"/><circle class="bar" cx="66" cy="66" r="60.5"/>
+            </svg>
+            <div class="num"><b>${it.scores.quality}</b><em>质量分</em></div>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('featured').onclick = ()=>openDetail(it.id);
+  }
+
+  const PAGE_SIZE = 4;
+  let curSort = 'rec', curPage = 1;
+
+  function sortedList(){
+    let list = feed.filter(f=>!f.featured).slice();
+    if(curSort==='new') list.sort((a,b)=>b.date.localeCompare(a.date));
+    if(curSort==='score') list.sort((a,b)=>b.scores.quality-a.scores.quality);
+    return list;
+  }
+
+  function renderCards(){
+    const list = sortedList();
+    const pages = Math.max(1, Math.ceil(list.length/PAGE_SIZE));
+    if(curPage>pages) curPage = pages;
+    const slice = list.slice((curPage-1)*PAGE_SIZE, curPage*PAGE_SIZE);
+    document.getElementById('cards').innerHTML = slice.map(it=>`
+      <article class="card" onclick="openDetail('${it.id}')">
+        ${thumb(it)}
+        <div>
+          <div class="meta">
+            <span class="tag src">◆ ${it.source}</span><span class="tag">${it.vertical}</span>
+            <span class="tag">${it.date}</span><span class="tag">${it.read} 分钟</span>
+          </div>
+          <h4>${it.title}</h4><p>${it.summary}</p>
+          <div class="bars">${miniDims.map(k=>`
+            <div class="dim"><em>${dimLabel[k]}</em><span class="meter"><i style="width:${it.scores[k]}%"></i></span></div>`).join('')}</div>
+        </div>
+        <div class="score-chip ${it.scores.quality>=85?'high':''}"><b>${it.scores.quality}</b><em>质量</em></div>
+      </article>`).join('');
+    renderPager(list.length, pages);
+  }
+
+  function renderPager(total, pages){
+    let html = `<button onclick="gotoPage(curPage-1)" ${curPage===1?'disabled':''}>←</button>`;
+    for(let p=1; p<=pages; p++) html += `<button class="${p===curPage?'on':''}" onclick="gotoPage(${p})">${p}</button>`;
+    html += `<button onclick="gotoPage(curPage+1)" ${curPage===pages?'disabled':''}>→</button>`;
+    html += `<span class="info">共 ${total} 条 · 第 ${curPage}/${pages} 页</span>`;
+    document.getElementById('pager').innerHTML = html;
+  }
+
+  function gotoPage(p){
+    const pages = Math.ceil(sortedList().length/PAGE_SIZE);
+    if(p<1||p>pages) return;
+    curPage = p; renderCards();
+    document.querySelector('#view-reader .sec-head').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  document.getElementById('seg').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); curSort = b.dataset.sort; curPage = 1; renderCards();
+  });
+
+  /* ---------- detail ---------- */
+  function openDetail(id){
+    const it = feed.find(f=>f.id===id); if(!it) return;
+    const order = ["quality","novelty","relevance","depth","clarity","impact"];
+    const url = srcUrl(it);
+    document.getElementById('view-detail').innerHTML = `
+      <a class="back" onclick="go('reader')">← 返回精选</a>
+      ${thumb(it,'cover-wide')}
+      <div class="detail-head">
+        <div>
+          <div class="tags"><span class="tag src">◆ ${it.source}</span><span class="tag">${it.vertical}</span><span class="tag">${it.date}</span><span class="tag">${it.read} 分钟</span></div>
+          <h1>${it.title}</h1>
+          <p class="lead">${it.summary}</p>
+          <a class="source-link" href="${url}" target="_blank" rel="noopener" onclick="toast('在新标签打开原文（演示）')">
+            ↗ 原文来源 · <b>${it.source}</b> <span class="u">${url.replace('https://','')}</span>
+          </a>
+          <div class="actions" id="acts">
+            <button class="act" data-k="read">📖 标记深读</button>
+            <button class="act" data-k="bm">🔖 收藏</button>
+            <button class="act" data-k="ni">🚫 不感兴趣</button>
+          </div>
+        </div>
+        <div class="decide">
+          <div class="big">${it.scores.quality}</div>
+          <div class="lbl">读取决策 · 质量分</div>
+          <p>由 L2 评分提供，L3 只读并用于分发展示，不修改源判断。</p>
+        </div>
+      </div>
+      <h3 class="sec-head" style="margin-bottom:12px">六维评分</h3>
+      <div class="six">${order.map(k=>`<div class="cell"><em>${dimLabel[k]}</em><b>${it.scores[k]}</b></div>`).join('')}</div>
+      <div class="detail-body">
+        <div class="panel">
+          <h5 style="color:var(--ink);font-size:15px;text-transform:none;letter-spacing:0">核心观点</h5>
+          <ul class="vp" style="padding:0">${it.viewpoints.map((v,i)=>`<li><span class="n">${i+1}</span><span class="t">${v}</span></li>`).join('')}</ul>
+          <blockquote class="quote">"${it.quote}"</blockquote>
+        </div>
+        <section class="panel">
+          <h5>AI 速读 · 这篇值不值得读</h5>
+          <div class="ai-verdict"><span class="av ai">✦</span><div><b>建议精读</b> · 质量分 ${it.scores.quality}，深度 ${it.scores.depth}。${it.read} 分钟读完。</div></div>
+          <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.7;margin:0 0 6px"><b>AI 提炼：</b>${it.viewpoints[0]}；${it.viewpoints[1]}。核心金句——“${it.quote}”</p>
+          <div class="companion-row" style="border-top:1px solid var(--line);padding-top:12px"><span class="av ai">✦</span><span class="txt">想让我对比同主题的其他精选，或把它加进今日早报吗？</span></div>
+          <div class="ask"><input placeholder="追问这篇…" onkeydown="if(event.key==='Enter'){toast('伴读回复中…（演示）');this.value=''}"/><button onclick="toast('伴读回复中…（演示）')">↑</button></div>
+          <div class="quota"><span>Free 配额</span><span class="track"><i style="width:40%"></i></span><span>2 / 5</span></div>
+        </section>
+      </div>`;
+    document.getElementById('acts').addEventListener('click', e=>{
+      const b=e.target.closest('button'); if(!b) return;
+      b.classList.toggle('on');
+      toast(b.classList.contains('on')?'已记录行为事件':'已取消');
+    });
+    go('detail', true);
+  }
+
+  /* ---------- brief list ---------- */
+  document.getElementById('briefList').innerHTML = feed.slice(0,5).map((it,i)=>`
+    <div class="brief-item" onclick="openDetail('${it.id}')" style="cursor:pointer;align-items:center">
+      <div class="rank">${i+1}</div>
+      ${thumb(it,'mini')}
+      <div><h4>${it.title}</h4><p>${it.source} · ${it.vertical} · 质量 ${it.scores.quality}</p></div>
+    </div>`).join('');
+
+  /* ---------- router ---------- */
+  const views = ['reader','detail','brief','pricing','api'];
+  function go(v, fromDetail){
+    views.forEach(x=>document.getElementById('view-'+x).hidden = (x!==v));
+    document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active', a.dataset.view===v));
+    if(v!=='detail') window.scrollTo({top:0,behavior:'smooth'});
+    else window.scrollTo({top:0});
+  }
+
+  /* ---------- companion (reader sidebar) ---------- */
+  let used=2;
+  function sendAsk(){
+    const inp=document.getElementById('askInput'); const q=inp.value.trim(); if(!q) return;
+    const chat=document.getElementById('chat');
+    chat.insertAdjacentHTML('beforeend', `<div class="companion-row"><span class="av you">你</span><span class="txt">${q}</span></div>`);
+    inp.value='';
+    if(used>=5){ toast('Free 配额已用完，升级 Pro 解锁无限'); return; }
+    used++; document.getElementById('quotaBar').style.width=(used/5*100)+'%'; document.getElementById('quotaTxt').textContent=used+' / 5';
+    setTimeout(()=>chat.insertAdjacentHTML('beforeend', `<div class="companion-row"><span class="av ai">✦</span><span class="txt">（演示回复）这是基于当前精选内容的回答占位，正式版会以 SSE 流式返回。</span></div>`),300);
+  }
+
+  /* ---------- login modal ---------- */
+  function openLogin(){
+    const o=document.createElement('div'); o.className='overlay'; o.onclick=e=>{if(e.target===o)o.remove()};
+    o.innerHTML=`<div class="modal">
+      <button class="x" onclick="this.closest('.overlay').remove()">×</button>
+      <h3>登录 CodePick</h3><p>用邮箱登录，体验收藏、个性化早报与无限伴读。</p>
+      <label>邮箱</label><input type="email" placeholder="you@example.com"/>
+      <label>密码</label><input type="password" placeholder="••••••••"/>
+      <button class="cta" style="margin-top:4px" onclick="this.closest('.overlay').remove();toast('登录成功（演示）')">登录</button>
+    </div>`;
+    document.body.appendChild(o);
+  }
+
+  /* ---------- toast ---------- */
+  let tT; function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),1800); }
+
+  /* ---------- theme & lang ---------- */
+  document.getElementById('themeBtn').onclick=()=>{const r=document.documentElement; r.dataset.theme=r.dataset.theme==='dark'?'light':'dark';};
+  let zh=true;
+  document.getElementById('langBtn').onclick=e=>{
+    zh=!zh; e.target.textContent=zh?'文':'EN';
+    document.getElementById('ph-title').textContent=zh?'今天值得读的工程内容':"Today's high-signal engineering reads";
+    document.getElementById('ph-sub').textContent=zh?'由 L2 评分、L3 只读分发。每条都经过六维质量评估，附中英对照与 AI 伴读。':'Scored by L2, distributed read-only by L3. Six-dimension quality, bilingual, with an AI companion.';
+  };
+
+  /* ---------- usage chart (api page) ---------- */
+  (function(){
+    const data = [620, 540, 880, 760, 1020, 940, 550];
+    const days = ['一','二','三','四','五','六','日'];
+    const max = Math.max(...data);
+    document.getElementById('usageChart').innerHTML = data.map((v,i)=>`
+      <div class="col"><div class="bar" style="height:${Math.round(v/max*100)}%" title="${v} 次"></div><em>${days[i]}</em></div>`).join('');
+  })();
+
+  /* init */
+  renderFeatured(); renderCards();
+</script>
+</body>
+</html>

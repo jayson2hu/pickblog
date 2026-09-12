@@ -1,0 +1,72 @@
+[
+  {
+    "id": "cp-001",
+    "title": "Async Python agents are getting cheaper to operate",
+    "source": "CodePick Research",
+    "url": "https://example.com/async-python-agents",
+    "vertical": "ai",
+    "status": "COMPLETED",
+    "published_at": "2026-05-29T08:00:00Z",
+    "thumbnail": "https://example.com/thumbs/async-python.jpg",
+    "summary": "A practical look at queue-backed agent systems and cost controls.",
+    "base_analysis": {
+      "summary": "Queue-backed agents can keep latency predictable while reducing idle model time.",
+      "viewpoints": ["Batch non-urgent work", "Measure tool failure rates", "Separate orchestration from scoring"],
+      "quotes": ["Cheaper agents start with better queues."]
+    },
+    "scores": {
+      "quality": 92,
+      "novelty": 84,
+      "relevance": 91,
+      "depth": 88,
+      "clarity": 86,
+      "impact": 89
+    },
+    "translations": {
+      "zh": {
+        "title": "\u5f02\u6b65 Python \u667a\u80fd\u4f53\u7684\u8fd0\u884c\u6210\u672c\u6b63\u5728\u4e0b\u964d",
+        "summary": "\u4e00\u7bc7\u5173\u4e8e\u961f\u5217\u9a71\u52a8\u667a\u80fd\u4f53\u7cfb\u7edf\u4e0e\u6210\u672c\u63a7\u5236\u7684\u5b9e\u8df5\u5206\u6790\u3002",
+        "base_analysis": {
+          "summary": "\u961f\u5217\u9a71\u52a8\u7684\u667a\u80fd\u4f53\u53ef\u4ee5\u964d\u4f4e\u6a21\u578b\u7a7a\u8f6c\u65f6\u95f4\uff0c\u5e76\u8ba9\u5ef6\u8fdf\u66f4\u53ef\u9884\u6d4b\u3002",
+          "viewpoints": ["\u6279\u5904\u7406\u975e\u7d27\u6025\u4efb\u52a1", "\u8861\u91cf\u5de5\u5177\u5931\u8d25\u7387", "\u62c6\u5206\u7f16\u6392\u4e0e\u8bc4\u5206"],
+          "quotes": ["\u66f4\u4f4e\u6210\u672c\u7684\u667a\u80fd\u4f53\u59cb\u4e8e\u66f4\u597d\u7684\u961f\u5217\u3002"]
+        }
+      }
+    }
+  },
+  {
+    "id": "cp-002",
+    "title": "Postgres read models for product analytics",
+    "source": "Engineering Notes",
+    "url": "https://example.com/postgres-read-models",
+    "vertical": "backend",
+    "status": "COMPLETED",
+    "published_at": "2026-05-28T10:30:00Z",
+    "thumbnail": "https://example.com/thumbs/postgres.jpg",
+    "summary": "How small teams can model event-derived product metrics in Postgres.",
+    "base_analysis": {
+      "summary": "Materialized read models make product analytics debuggable without a separate warehouse.",
+      "viewpoints": ["Keep event writes append-only", "Use daily aggregates", "Expose metric definitions in code"],
+      "quotes": ["A metric is an API contract."]
+    },
+    "scores": {
+      "quality": 87,
+      "novelty": 76,
+      "relevance": 90,
+      "depth": 82,
+      "clarity": 90,
+      "impact": 80
+    },
+    "translations": {
+      "zh": {
+        "title": "\u9762\u5411\u4ea7\u54c1\u5206\u6790\u7684 Postgres \u8bfb\u53d6\u6a21\u578b",
+        "summary": "\u5c0f\u56e2\u961f\u5982\u4f55\u5728 Postgres \u4e2d\u5efa\u6a21\u4e8b\u4ef6\u6d3e\u751f\u7684\u4ea7\u54c1\u6307\u6807\u3002",
+        "base_analysis": {
+          "summary": "\u7269\u5316\u8bfb\u53d6\u6a21\u578b\u8ba9\u4ea7\u54c1\u5206\u6790\u66f4\u5bb9\u6613\u8c03\u8bd5\uff0c\u4e5f\u4e0d\u5fc5\u8fc7\u65e9\u5f15\u5165\u72ec\u7acb\u6570\u4ed3\u3002",
+          "viewpoints": ["\u4e8b\u4ef6\u5199\u5165\u4fdd\u6301\u8ffd\u52a0", "\u4f7f\u7528\u6bcf\u65e5\u805a\u5408", "\u5728\u4ee3\u7801\u4e2d\u66b4\u9732\u6307\u6807\u5b9a\u4e49"],
+          "quotes": ["\u6307\u6807\u5c31\u662f API \u5951\u7ea6\u3002"]
+        }
+      }
+    }
+  }
+]

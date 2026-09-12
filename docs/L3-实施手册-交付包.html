@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L3 应用与分发 · 实施手册（交付包）</title>
+<style>
+  :root{--bg:#f8f6fd;--card:#fff;--ink:#1a1726;--muted:#5b5470;--dim:#928aa6;--line:#e7e3f1;--acc:#7c3aed;--acc2:#6d28d9;--soft:#f1ebfe;--green:#0d9488;--gsoft:#e6f9f3;--blue:#2563eb;--bsoft:#e9f0fe;--amber:#c2730a;--asoft:#fff6e8;--violet:#7c3aed}
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7;font-size:14.5px}
+  a{color:var(--acc)}.wrap{display:grid;grid-template-columns:250px 1fr;max-width:1300px;margin:0 auto}
+  nav{position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 13px;border-right:1px solid var(--line);background:#fff}
+  nav .bk{display:inline-block;font-size:10px;font-weight:800;letter-spacing:1px;color:#fff;background:var(--acc);padding:3px 9px;border-radius:6px;margin-bottom:7px}
+  nav .brand{font-weight:800;font-size:14.5px}nav .sub{color:var(--dim);font-size:11px;margin-bottom:12px}
+  nav a{display:block;color:var(--muted);padding:5px 10px;border-radius:7px;font-size:12.3px}nav a:hover{background:var(--soft);color:var(--acc2);text-decoration:none}
+  nav .grp{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:12px 0 2px 10px}
+  main{padding:36px 50px 110px;min-width:0}
+  .tag{display:inline-block;background:var(--soft);color:var(--acc2);border:1px solid #d8c8fb;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:700;margin-bottom:12px}
+  h1{font-size:28px;line-height:1.25;margin:0 0 10px;font-weight:800}h1 em{font-style:normal;color:var(--acc)}
+  .lede{color:var(--muted);font-size:15.5px;max-width:830px}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.mt{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:11.5px;color:var(--muted)}.mt b{color:var(--ink)}
+  section{margin:34px 0;scroll-margin-top:12px}
+  h2{font-size:20px;margin:0 0 6px;font-weight:800;display:flex;align-items:center;gap:10px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+  h2 .x{background:var(--acc);color:#fff;min-width:25px;height:25px;padding:0 6px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+  h3{font-size:15px;margin:18px 0 7px}.note{color:var(--dim);font-size:12.3px;margin-bottom:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12.4px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f1ebfb;color:var(--ink);font-weight:700}td{color:var(--muted)}tr:last-child td{border-bottom:none}td strong{color:var(--ink)}
+  ul.clean{margin:7px 0;padding-left:18px}ul.clean li{margin:3px 0;color:var(--muted)}ul.clean li strong{color:var(--ink)}
+  code{background:#efecf6;padding:1.5px 6px;border-radius:5px;font-size:12px;color:var(--acc2);font-family:Consolas,monospace}
+  pre{background:#1a1530;border:1px solid var(--line);border-radius:11px;padding:14px 16px;overflow-x:auto;font-size:11.6px;line-height:1.5;color:#d3cae8;margin:11px 0}
+  pre .c{color:#7a6f98}pre .k{color:#c4b5fd}pre .s{color:#6ee7b7}pre .y{color:#fcd34d}
+  .box{border-radius:9px;padding:10px 13px;margin:6px 0;font-size:12.6px}.box.acc{background:var(--gsoft);border:1px solid #aee6d8}.box.acc b{color:#0f766e}
+  .callout{border-left:4px solid var(--acc);background:var(--soft);padding:11px 15px;border-radius:0 10px 10px 0;margin:12px 0;color:var(--muted)}.callout.amber{border-color:var(--amber);background:var(--asoft)}.callout.green{border-color:var(--green);background:var(--gsoft)}.callout b{color:var(--ink)}
+  .chk{list-style:none;padding:0;margin:8px 0}.chk li{padding:6px 0 6px 28px;position:relative;border-bottom:1px solid var(--line);font-size:12.7px;color:var(--muted)}.chk li:last-child{border-bottom:none}
+  .chk li::before{content:"☐";position:absolute;left:3px;top:5px;color:var(--acc);font-size:15px}.chk li b{color:var(--ink)}.chk .fid{display:inline-block;font-size:10px;font-weight:800;color:var(--acc2);background:#f1ebfb;border:1px solid #d8c8fb;padding:0 6px;border-radius:5px;margin-right:6px}
+  .done{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:5px;background:var(--gsoft);color:#0f766e}
+  .prompt{background:#1a1530;border:1px solid #3a2e5e;border-radius:12px;padding:16px 18px;margin:12px 0;color:#e3dcf2;font-size:12.6px;line-height:1.65;white-space:pre-wrap;font-family:Consolas,monospace}
+  .prompt .h{color:#c4b5fd;font-weight:800}
+  .foot{margin-top:46px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font-size:12px}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}nav{display:none}main{padding:22px 14px 60px}h1{font-size:22px}}
+  @media print{nav{display:none}.wrap{grid-template-columns:1fr}body{background:#fff}main{padding:0}.card{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <span class="bk">LAYER 3</span>
+    <div class="brand">应用与分发 · 实施手册</div>
+    <div class="sub">交付包 · ready-to-build</div>
+    <a href="#status">完成度总览</a>
+    <a href="#deliverables">L3 交付物清单</a>
+    <a href="#standalone">独立开发说明</a>
+    <a href="#scaffold">① 仓库脚手架</a>
+    <a href="#contracts">② 接口契约</a>
+    <a href="#config">③ 配置清单</a>
+    <a href="#checklist">④ 执行清单</a>
+    <a href="#smoke">⑤ 冒烟自检</a>
+    <a href="#dod">⑥ 完成判定</a>
+    <a href="#prompt">★ Codex 提示词</a>
+  </nav>
+  <main>
+    <span class="tag">L3 实施手册 · 含 Codex 提示词</span>
+    <h1>L3 应用与分发 — <em>实施手册（交付包）</em></h1>
+    <p class="lede">把 L3 补齐到执行级：脚手架、接口契约、配置、执行清单、冒烟自检，附<b>可直接复制给 Codex 的提示词</b>。L3 可对 L2 stub 独立开发。</p>
+    <div class="meta"><span class="mt">独立开发：<b>L2 stub + 支付沙箱</b></span><span class="mt">栈：<b>Next.js · FastAPI · PG · Paddle/Stripe</b></span></div>
+
+    <section id="status">
+      <h2><span class="x">✓</span>完成度总览</h2>
+      <div class="card"><table>
+        <thead><tr><th>交付物</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td>L3-应用与分发-产品文档.html</td><td><span class="done">完成</span></td></tr>
+          <tr><td>L3-应用与分发-架构设计.html</td><td><span class="done">完成</span></td></tr>
+          <tr><td>L3-开发Plan-详尽版.html</td><td><span class="done">完成</span></td></tr>
+          <tr><td><strong>L3-实施手册-交付包.html</strong>（本文）</td><td><span class="done">完成</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="deliverables">
+      <h2><span class="x">▤</span>L3 交付物清单（4 份 → 文件夹 <code>L3-应用与分发/</code>）</h2>
+      <ul class="clean">
+        <li><strong>L3-应用与分发-产品文档.html</strong></li>
+        <li><strong>L3-应用与分发-架构设计.html</strong></li>
+        <li><strong>L3-开发Plan-详尽版.html</strong></li>
+        <li><strong>L3-实施手册-交付包.html</strong>（本文，含 Codex 提示词）</li>
+      </ul>
+    </section>
+
+    <section id="standalone">
+      <h2><span class="x">⇄</span>独立开发说明</h2>
+      <div class="callout amber"><b>L3 不依赖 L2 完成。</b>读内容/评分/翻译经 <code>ContentReadProvider</code>，开发期注入 <b>StubContentReadProvider</b>（fixtures）；推荐/伴读调 L2 接口也用 stub；支付用<b>沙箱</b>。集成期换真 L2、接事件、合并迁移、接真实支付。</div>
+    </section>
+
+    <section id="scaffold">
+      <h2><span class="x">1</span>仓库脚手架</h2>
+      <pre><span class="k">apps/reader-web/</span>            <span class="c"># Next.js (App Router, TS, Tailwind, i18n)</span>
+  app/ (routes) components/ lib/ i18n/
+<span class="k">services/reader-api/</span>        <span class="c"># FastAPI 用户API/BFF (JWT)</span>
+  routers/ feed,brief,read,companion,events,follow,billing
+  auth/ gating.py provider.py stub.py
+<span class="k">services/public-api/</span>        <span class="c"># FastAPI /v1 (API Key+限流+配额)</span>
+<span class="k">services/mcp-server/</span>         <span class="c"># MCP Python SDK</span>
+<span class="k">workers/briefs/</span>             <span class="c"># Arq cron: 公共/我的早报 + 邮件</span></pre>
+    </section>
+
+    <section id="contracts">
+      <h2><span class="x">2</span>接口契约（关键签名）</h2>
+      <pre><span class="c"># 输入（解耦 L2）</span>
+<span class="k">class</span> ContentReadProvider(Protocol):
+    def list(self, vertical, status="COMPLETED", filters, cursor, limit) -> Page
+    def get(self, content_id) -> ContentDetail   <span class="c"># base+scores+translations</span>
+    def recommend(self, user_id, vertical, limit) -> list   <span class="c"># 调 L2</span>
+    def companion(self, content_id, question) -> Iterator[str]
+class StubContentReadProvider: ...
+
+<span class="c"># BFF 接口（前端唯一入口）</span>
+GET /api/feed · GET /api/brief · GET /api/read/:id
+POST /api/companion (SSE) · POST /api/events · POST /api/follow
+POST /api/billing/webhook
+
+<span class="c"># 门禁（集中）</span>
+def require_plan(plan: str)   <span class="c"># 装饰器/依赖，单点治理</span>
+
+<span class="c"># /v1 对外原语（独立信任边界）</span>
+GET /v1/today · /v1/search · /v1/items/:id · /v1/trending · /v1/sources · /v1/verticals</pre>
+    </section>
+
+    <section id="config">
+      <h2><span class="x">3</span>配置清单（.env 追加）</h2>
+      <pre>JWT_SECRET=... OAUTH_GITHUB_ID/SECRET=... OAUTH_GOOGLE_ID/SECRET=...
+PADDLE_VENDOR_ID=... PADDLE_API_KEY=... PADDLE_WEBHOOK_SECRET=...
+PRICE_PRO_MONTH_USD=8  PRICE_PRO_YEAR_USD=79  PRICE_EARLYBIRD_USD=4.9
+EMAIL_PROVIDER=resend  RESEND_API_KEY=...
+COMPANION_FREE_DAILY=5
+API_RATE_FREE_RPM=20 API_QUOTA_FREE_DAY=200
+DEFAULT_LOCALE=en  SUPPORTED_LOCALES=en,zh
+L3_USE_STUB_L2=true</pre>
+    </section>
+
+    <section id="checklist">
+      <h2><span class="x">4</span>执行清单（按 Sprint）</h2>
+      <h3>S1 骨架+展示</h3><ul class="chk"><li><span class="fid">F0.1-0.4</span> reader-web/reader-api/public-api 骨架 + 迁移</li><li><span class="fid">F1.1-1.2</span> ContentReadProvider + L2 stub</li><li><span class="fid">F2.1-2.3</span> 公共精选 + 详情双语 + 统一列表</li></ul>
+      <h3>S2 账户+个性化</h3><ul class="chk"><li><span class="fid">F3.1-3.2</span> 登录 + 门禁 require_plan</li><li><span class="fid">F4.1-4.4</span> 兴趣 + 我的早报 + 推荐 + 埋点</li></ul>
+      <h3>S3 伴读+早报</h3><ul class="chk"><li><span class="fid">F5.1-5.2</span> 伴读 SSE + 配额</li><li><span class="fid">F6.1-6.3</span> 公共/我的早报 + 邮件</li></ul>
+      <h3>S4 商业化</h3><ul class="chk"><li><span class="fid">F7.1-7.2</span> Checkout(USD) + webhook 订阅同步</li></ul>
+      <h3>S5 API+MCP+i18n</h3><ul class="chk"><li><span class="fid">F8.1-8.3</span> /v1 原语 + Key/限流/配额 + MCP</li><li><span class="fid">F9.1-9.2</span> i18n + SEO</li></ul>
+    </section>
+
+    <section id="smoke">
+      <h2><span class="x">5</span>冒烟自检</h2>
+      <pre><span class="c"># make l3-smoke（用 L2 stub + 支付沙箱）</span>
+1. 起 reader-web + reader-api（stub provider）
+2. E2E: 访问公共精选 → 详情双语展示正确
+3. E2E: 注册登录 → 完成兴趣引导 → 我的早报渲染
+4. E2E: 详情伴读问答流式返回；Free 超额被拦
+5. Job: 触发早报生成 → 断言 briefs 行 + 邮件 mock 调用
+6. 沙箱支付 webhook → 断言用户升 Pro，门禁放行
+7. (V2) /v1/today 带 key 返回结构正确；超额 429
+8. print "L3 PIPELINE: PASS"</pre>
+      <div class="box acc"><b>✓ 验收</b> <code>make l3-smoke</code> 输出 <code>L3 PIPELINE: PASS</code>。</div>
+    </section>
+
+    <section id="dod">
+      <h2><span class="x">6</span>完成判定（L3 DoD）</h2>
+      <ul class="chk">
+        <li>用 L2 stub + 支付沙箱独立端到端跑通</li>
+        <li>公共精选+详情双语；统一列表分页稳定</li>
+        <li>账户鉴权闭环；Pro 门禁集中、对 Free 正确拒绝</li>
+        <li>早报生成+邮件；行为埋点支撑北极星</li>
+        <li>计费闭环：升/降级正确、webhook 验签</li>
+        <li>（V2）/v1 + Key/限流/配额 + MCP 可用</li>
+        <li>i18n 全覆盖、SEO 齐全；E2E + 后端测试 CI 全绿</li>
+      </ul>
+    </section>
+
+    <section id="prompt">
+      <h2><span class="x">★</span>Codex 提示词（复制即用）</h2>
+      <p class="note">把 L3 的 4 份文档放进 <code>L3-应用与分发/</code>，连同下面这段提示词一起交给 Codex。</p>
+      <div class="prompt"><span class="h"># 角色</span>
+你是资深全栈工程师（Next.js + Python/FastAPI），负责独立实现 CodePick 平台的 L3「应用与分发」（Reader Web + Public API/MCP + Brief + 计费）。
+
+<span class="h"># 输入材料（同目录 4 份 HTML，先全部读完）</span>
+- L3-应用与分发-产品文档.html   —— 产品矩阵、Free/Pro、北极星
+- L3-应用与分发-架构设计.html   —— 服务架构、鉴权边界、计费
+- L3-开发Plan-详尽版.html       —— EPIC/Feature 拆解 + 每项验收 + 自测（实现依据）
+- L3-实施手册-交付包.html       —— 脚手架、接口契约、配置、冒烟
+
+<span class="h"># 任务</span>
+按《开发Plan》EPIC E0→E9、Feature 顺序实现，逐个用「验收」+「自测」收口。
+按《实施手册》的脚手架、接口契约、配置落地。
+
+<span class="h"># 硬约束</span>
+1. 独立开发：读内容/评分/翻译只经 ContentReadProvider，注入 StubContentReadProvider + fixtures；推荐/伴读用 stub；支付用沙箱。**不依赖真 L2、不接真实支付账户。**
+2. 信任边界隔离：内部 /api（JWT）与对外 /v1（API Key+限流+配额）分服务、分前缀、分过滤器；/v1 不泄漏推荐决策与隐私上下文。
+3. 门禁集中：Free/Pro 用单点 require_plan 治理，禁止散落各入口。
+4. 表归属：L3 只拥有 users/subscriptions/interests/follows/reading_events/briefs/bookmarks/api_keys/usage；只读 L0–L2 内容/评分/翻译。
+5. 收款 USD（Paddle 作 MoR）；价格 $8/月·$79/年（早鸟 $4.9）。
+6. 技术栈：Next.js(App Router,TS,Tailwind,i18n) + FastAPI + SQLAlchemy/Alembic + PostgreSQL + Arq + Resend/SES。北极星埋点=深度阅读闭环率，不优化时长/DAU。
+
+<span class="h"># 交付标准（DoD）</span>
+- 每个 Feature 通过其自测；每 Sprint 末 `make l3-smoke` 输出 "L3 PIPELINE: PASS"。
+- 前端 Playwright E2E + 后端 pytest（含 webhook 验签、配额、门禁）CI 全绿。
+- 满足《实施手册》第 6 节 L3 DoD 全部条目。
+- 产出：可运行代码 + 测试 + 迁移 + README。
+
+<span class="h"># 工作方式</span>
+每完成一个 Sprint 提交一次，附已实现 Feature、自测结果、覆盖率、遗留项。契约层面歧义先提问，不擅自改冻结契约或绕过门禁/信任边界。</div>
+    </section>
+
+    <div class="foot">L3 应用与分发 · 实施手册（交付包）· 含 Codex 提示词 · 可对 L2 stub 独立开发 · CodePick 分层平台 · 2026-05-30</div>
+  </main>
+</div>
+</body>
+</html>

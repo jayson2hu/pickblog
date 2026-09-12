@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodePick L3 应用与分发 - 产品文档</title>
+  <style>
+    body{margin:0;background:#fafafa;color:#151515;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;line-height:1.7}
+    main{max-width:980px;margin:0 auto;padding:40px 24px 80px}
+    h1{font-size:30px;margin:0 0 12px}h2{font-size:21px;margin-top:34px;border-bottom:1px solid #ddd;padding-bottom:8px}
+    table{width:100%;border-collapse:collapse;margin:14px 0;background:#fff}th,td{border:1px solid #ddd;padding:10px;vertical-align:top;text-align:left}th{background:#f2f2f2}
+    code{background:#f2f2f2;padding:2px 6px;border-radius:4px}.note{background:#fff7ed;border-left:4px solid #f97316;padding:12px 14px}
+  </style>
+</head>
+<body>
+<main>
+  <h1>CodePick L3 应用与分发 - 产品文档</h1>
+  <p>L3 面向最终用户和开发者分发 L2 已完成的内容判断结果。L3 不生产内容评分，不绕过 L2 契约，只负责 Reader Web、每日早报、Public API、MCP 和商业化闭环。</p>
+
+  <h2>1. 产品定位</h2>
+  <table>
+    <thead><tr><th>产品面</th><th>目标用户</th><th>核心价值</th><th>当前实现入口</th></tr></thead>
+    <tbody>
+      <tr><td>Reader Web</td><td>个人读者</td><td>双语浏览、详情分析、收藏、兴趣、深读事件闭环</td><td><code>/[locale]</code>, <code>/[locale]/items/[id]</code>, <code>/[locale]/brief</code></td></tr>
+      <tr><td>Daily Brief</td><td>Free / Pro 用户</td><td>公共早报免费可读，个人早报由 Pro 门禁保护</td><td><code>/api/brief/public</code>, <code>/api/brief/me</code></td></tr>
+      <tr><td>AI Companion</td><td>深读用户</td><td>基于内容详情给出伴读建议，Free 有日配额，Pro 放开</td><td><code>/api/companion</code></td></tr>
+      <tr><td>Public API</td><td>开发者和分发伙伴</td><td>公开、裁剪后的今日、搜索、详情、趋势、来源和垂类接口</td><td><code>/v1/*</code></td></tr>
+      <tr><td>MCP</td><td>AI 工具调用方</td><td>复用 Public API 的公开字段边界</td><td><code>today</code>, <code>search</code>, <code>item</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Free / Pro 矩阵</h2>
+  <table>
+    <thead><tr><th>能力</th><th>Free</th><th>Pro</th></tr></thead>
+    <tbody>
+      <tr><td>公共精选与详情</td><td>允许</td><td>允许</td></tr>
+      <tr><td>个人兴趣、关注、收藏</td><td>允许</td><td>允许</td></tr>
+      <tr><td>个人早报</td><td>禁止，由 <code>require_plan</code> 返回 403</td><td>允许</td></tr>
+      <tr><td>AI Companion</td><td>每日 5 次</td><td>不限本地配额</td></tr>
+      <tr><td>Public API</td><td>API Key、RPM 和日配额限制</td><td>可扩展更高配额</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. 商业化</h2>
+  <p>默认开发和自测使用支付沙箱。生产切换到 Paddle Merchant of Record，收款币种固定为 USD。</p>
+  <ul>
+    <li>Pro 月付：<strong>$8/month</strong></li>
+    <li>Pro 年付：<strong>$79/year</strong></li>
+    <li>早鸟：<strong>$4.9</strong></li>
+  </ul>
+
+  <h2>4. 北极星与反指标</h2>
+  <p>北极星指标是<strong>深度阅读闭环率</strong>：用户从推荐或早报进入内容，并产生有效深读事件。L3 记录 <code>click</code> 与 <code>deep_read</code> 等事件，但不把阅读时长和 DAU 作为优化目标。</p>
+  <div class="note">产品判断以“帮助用户更快决定是否值得深读”为核心，不鼓励沉迷式停留。</div>
+
+  <h2>5. 独立开发边界</h2>
+  <ul>
+    <li>内容、评分、翻译只通过 <code>ContentReadProvider</code> 读取。</li>
+    <li>默认 <code>StubContentReadProvider</code>，联调时通过 <code>L3_USE_STUB_L2=false</code> 切换真实 L2。</li>
+    <li>推荐、伴读、邮件和支付在开发期均可用 stub/mock/sandbox 独立跑通。</li>
+    <li><code>/v1</code> 不暴露推荐决策、私有上下文、完整分析和翻译对象。</li>
+  </ul>
+</main>
+</body>
+</html>

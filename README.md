@@ -100,6 +100,10 @@ make mcp-smoke
 ```
 
 The MCP wrapper uses the same public item serializer as `/v1` and exposes `today`, `search`, and `item` tool contracts without private recommendation context.
+Public API `GET /v1/search?q=...&cursor=...&limit=...` and MCP `search` both
+send the query to the active content provider. With real L2 enabled, filtering
+happens in L2 before cursor pagination; neither surface performs page-local
+post-filtering.
 
 Brief worker:
 
@@ -161,8 +165,11 @@ NEXT_TELEMETRY_DISABLED=1 \
 npm run dev -- --hostname 127.0.0.1 --port 3200
 ```
 
-The L2 HTTP provider maps a missing item to L3 404. Network failures, timeouts and
-L2 5xx responses become retryable L3 503 responses with `Retry-After: 2`.
+The L2 HTTP provider maps a missing detail item to L3 404. Invalid cursors and
+other L2 400 responses become L3 400 `invalid_request`; L2 401/403 or missing
+provider configuration become non-retryable 503 `l2_configuration_error`.
+Network failures, timeouts, malformed upstream schemas, list-endpoint 404, and
+L2 5xx responses become retryable L3 503 `l2_unavailable` with `Retry-After: 2`.
 `/api/*` is proxied by Next.js, so browsers do not require cross-origin access in
 the normal local topology.
 
@@ -224,6 +231,11 @@ Public API content and taxonomy primitives return quota context at the response 
 
 `GET /v1/items/{id}` uses `{ "item": { ...public fields... }, "quota": { ... } }` so quota metadata never expands the public item field set. `/v1/ready` authenticates with `X-API-Key` but does not consume daily quota or RPM.
 
+Search is server-side and cursor-stable: `q` is limited to 200 characters and is
+applied to title/summary before pagination. Public API and MCP use the same provider
+query. Provider failures are never replaced with stub content when
+`L3_USE_STUB_L2=false`.
+
 ## Sprint Status
 
 - S1 foundation/display: scaffold, provider stub, public feed, detail, pagination contract, and backend tests.
@@ -236,7 +248,9 @@ Public API content and taxonomy primitives return quota context at the response 
 M2 browser/API integration and the L2 HTTP service are now implemented and verified
 locally without API mocks against the retained M1 SQLite result. M3 adds persistent
 per-user account isolation, authentication failure boundaries, and the secure
-frontend dependency baseline. Remaining work includes a real identity provider,
+frontend dependency baseline. Public API/MCP search now uses L2-side filtering
+before pagination and has explicit request, configuration, missing-item, and
+retryable-upstream error boundaries. Remaining work includes a real identity provider,
 official Paddle checkout/webhook handling, MCP protocol transport, and full
 PostgreSQL/Redis/Arq/email/real-model integration. The current development and
 sandbox paths do not become production-ready through configuration alone. See the

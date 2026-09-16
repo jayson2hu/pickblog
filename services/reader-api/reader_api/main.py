@@ -1,12 +1,42 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from codepick_l3.provider import ProviderUnavailable
+from codepick_l3.provider import (
+    ProviderConfigurationError,
+    ProviderRequestError,
+    ProviderUnavailable,
+)
 from codepick_l3.readiness import l3_readiness
 
 from .routers import admin, api_keys, auth, billing, briefs, companion, events, feed, library, me, read, taxonomy
 
 
 app = FastAPI(title="CodePick Reader API")
+
+
+@app.exception_handler(ProviderConfigurationError)
+async def provider_configuration_error(
+    _request: Request, exc: ProviderConfigurationError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": {
+                "code": "l2_configuration_error",
+                "message": str(exc),
+                "retryable": False,
+            }
+        },
+    )
+
+
+@app.exception_handler(ProviderRequestError)
+async def provider_request_error(
+    _request: Request, exc: ProviderRequestError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={"detail": {"code": "invalid_request", "message": str(exc)}},
+    )
 
 
 @app.exception_handler(ProviderUnavailable)

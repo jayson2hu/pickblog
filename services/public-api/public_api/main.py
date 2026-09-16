@@ -1,4 +1,10 @@
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse
+from codepick_l3.provider import (
+    ProviderConfigurationError,
+    ProviderRequestError,
+    ProviderUnavailable,
+)
 from codepick_l3.readiness import l3_readiness
 from codepick_l3.usage import require_api_key_identity
 
@@ -6,6 +12,51 @@ from .routers import v1
 
 
 app = FastAPI(title="CodePick Public API")
+
+
+@app.exception_handler(ProviderConfigurationError)
+async def provider_configuration_error(
+    _request: Request, exc: ProviderConfigurationError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": {
+                "code": "l2_configuration_error",
+                "message": str(exc),
+                "retryable": False,
+            }
+        },
+    )
+
+
+@app.exception_handler(ProviderRequestError)
+async def provider_request_error(
+    _request: Request, exc: ProviderRequestError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={"detail": {"code": "invalid_request", "message": str(exc)}},
+    )
+
+
+@app.exception_handler(ProviderUnavailable)
+async def provider_unavailable(
+    _request: Request, exc: ProviderUnavailable
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": {
+                "code": "l2_unavailable",
+                "message": str(exc),
+                "retryable": True,
+            }
+        },
+        headers={"Retry-After": "2"},
+    )
+
+
 app.include_router(v1.router, prefix="/v1")
 
 

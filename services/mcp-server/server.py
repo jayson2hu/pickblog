@@ -22,9 +22,12 @@ def today(limit: int = 10) -> dict:
 
 def search(q: str, limit: int = 10) -> dict:
     limit = _public_limit(limit)
-    page = get_content_provider().list(limit=limit)
-    query = q.lower()
-    return {"items": [public_content_item(item) for item in completed_public_items(page.items) if query in item.title.lower() or query in item.summary.lower()]}
+    page = get_content_provider().list(limit=limit, filters={"q": q})
+    return {
+        "items": [
+            public_content_item(item) for item in completed_public_items(page.items)
+        ]
+    }
 
 
 def item(content_id: str) -> dict:

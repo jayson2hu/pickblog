@@ -5,7 +5,7 @@ This file captures the sprint-level delivery notes required by the L3 plan. The 
 ## Current Verification
 
 - Full handoff gate: `python scripts/l3_verify.py` -> `L3 VERIFY: PASS`
-- Backend contracts: `119 passed` (previous independent baseline: `108 passed`)
+- Backend contracts: `126 passed` (previous independent baseline: `119 passed`)
 - Reader Web Playwright: `26 passed`
 - Migration smoke: `L3 MIGRATION: PASS`
 - Sprint smoke: `L3 PIPELINE: PASS`
@@ -47,7 +47,13 @@ This file captures the sprint-level delivery notes required by the L3 plan. The 
 - Implemented features: F8.1-F8.3, F9.1-F9.2.
 - Scope: public `/v1` API, API key lifecycle, rate limit/quota, MCP wrappers, shared public serializer, quota envelope, readiness auth, bilingual UI, Chinese copy validation, sitemap, and SEO metadata.
 - Self-test evidence: backend tests cover API key lifecycle, read-scope enforcement, ready auth without quota consumption, daily quota, RPM limit, public item field set, taxonomy quota, completed-only `/v1` and MCP filtering, MCP smoke, UTF-8 copy checks, and final checklist coverage; Playwright covers English/Chinese routes, localized controls, sitemap, and detail metadata.
-- Coverage/evidence: included in `108 passed` backend contracts and `26 passed` Playwright E2E.
+- Coverage/evidence: included in `126 passed` backend contracts and `26 passed` Playwright E2E.
+- Search now pushes `q` into the shared provider before pagination for both
+  `/v1/search` and MCP `search`. Tests cover cursor-stable results, Public/MCP
+  consistency, query length, invalid cursors, and HTTP query forwarding.
+- Provider failures distinguish invalid requests (400), missing detail items (404),
+  non-retryable L2 configuration/authentication failures (503), and retryable
+  network, schema, list-404, or upstream-5xx failures (503 with `Retry-After: 2`).
 - Remaining work: final integration must validate `/v1` and MCP against production API key storage and real L2 content.
 
 ## Final Integration Residuals
@@ -75,5 +81,17 @@ This file captures the sprint-level delivery notes required by the L3 plan. The 
 - Reader Web moved from Next 14 to Next 16.3.5, PostCSS 8.5.28, and Playwright
   1.63.0. `npm ci`, zero-vulnerability `npm audit`, typecheck, production
   build, and 26 Playwright tests pass.
-- Current backend evidence is 119 passed. Real OIDC/magic-link auth, production
+- Current backend evidence is 126 passed. Real OIDC/magic-link auth, production
   Paddle, real email, and production data remain outside this acceptance.
+
+## Public Search And Upstream Boundary Acceptance
+
+- A no-API-mock cross-process run used a disposable SQLite L1/L2 dataset, real L2
+  HTTP on `127.0.0.1:18220`, and Public API on `127.0.0.1:18001` with
+  `L3_USE_STUB_L2=false`.
+- A query matching only the second of two articles returned that article with
+  `next_cursor=null`, proving filtering occurred before pagination.
+- Stopping L2 produced `l2_unavailable`, `retryable=true`, and `Retry-After: 2`;
+  an invalid cursor produced `invalid_request` with HTTP 400.
+- This acceptance used FakeLLM-derived persisted data and temporary SQLite. It did
+  not contact production databases, paid models, real identity, email, or billing.

@@ -70,6 +70,34 @@ PLAYWRIGHT_PORT=3200 npm run test:e2e:m2
 后无需重建 Reader API 或前端即可继续读取。真实模式下不得设置
 `READER_USE_DEMO_FALLBACK=true`。
 
+## Public API 搜索与上游错误验收
+
+Public API 使用相同 L2 服务时可启动在另一个 loopback 端口：
+
+```sh
+L3_USE_STUB_L2=false \
+L2_BASE_URL=http://127.0.0.1:8200 \
+PUBLIC_API_HOST=127.0.0.1 \
+PUBLIC_API_PORT=8001 \
+.venv/bin/python scripts/run_public_api.py
+
+curl --get -H 'X-API-Key: cp_test_key' \
+  --data-urlencode 'q=postgres' \
+  --data 'limit=10' \
+  http://127.0.0.1:8001/v1/search
+```
+
+`q` 会下推到 L2 并在分页前搜索；MCP `search` 使用同一 provider 语义。专项测试：
+
+```sh
+.venv/bin/python -m pytest -c pytest.ini tests/test_public_api_search.py
+```
+
+2026-09-16 的无 API mock 跨进程验收使用临时 SQLite、真实 L2 HTTP 和关闭 stub
+的 Public API，得到唯一命中文章并返回 `next_cursor=null`。停止 L2 后同一请求返回
+503 `l2_unavailable`、`retryable=true` 和 `Retry-After: 2`；非法游标返回 400
+`invalid_request`。服务都只绑定 `127.0.0.1`，未连接真实业务数据库或付费模型。
+
 ## 交接范围
 
 提交包括当前源码、测试、迁移、配置示例与项目文档。依赖目录、构建产物、本地数据库、采集运行数据、日志和凭据不随仓库分发，需要在新环境重新安装或配置。

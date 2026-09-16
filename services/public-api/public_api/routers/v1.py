@@ -20,10 +20,22 @@ def today(cursor: str | None = None, limit: int = Query(default=10, ge=1, le=50)
 
 
 @router.get("/search")
-def search(q: str = "", cursor: str | None = None, limit: int = Query(default=10, ge=1, le=50), key: ApiKeyRecord = Depends(require_api_key)) -> dict:
-    page = get_content_provider().list(cursor=cursor, limit=limit)
-    items = [item for item in completed_public_items(page.items) if q.lower() in item.title.lower() or q.lower() in item.summary.lower()]
-    return {"items": [public_content_item(item) for item in items], "next_cursor": page.next_cursor, "quota": quota_snapshot(key)}
+def search(
+    q: str = Query(default="", max_length=200),
+    cursor: str | None = None,
+    limit: int = Query(default=10, ge=1, le=50),
+    key: ApiKeyRecord = Depends(require_api_key),
+) -> dict:
+    page = get_content_provider().list(
+        cursor=cursor,
+        limit=limit,
+        filters={"q": q},
+    )
+    return {
+        "items": [public_content_item(item) for item in completed_public_items(page.items)],
+        "next_cursor": page.next_cursor,
+        "quota": quota_snapshot(key),
+    }
 
 
 @router.get("/items/{content_id}")

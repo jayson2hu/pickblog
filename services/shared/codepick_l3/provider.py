@@ -7,11 +7,21 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from pydantic import ValidationError
+
 from .config import get_settings
 from .schemas import ContentDetail, ContentSummary, Page
 
 
 class ProviderUnavailable(RuntimeError):
+    pass
+
+
+class ProviderConfigurationError(ProviderUnavailable):
+    pass
+
+
+class ProviderRequestError(ValueError):
     pass
 
 
@@ -47,8 +57,24 @@ class StubContentReadProvider:
         cursor: str | None = None,
         limit: int = 20,
     ) -> Page:
-        offset = int(cursor or 0)
-        rows = [item for item in self._items if item.status == status and (vertical is None or item.vertical == vertical)]
+        try:
+            offset = int(cursor or 0)
+        except ValueError as exc:
+            raise ProviderRequestError("cursor must be a nonnegative integer") from exc
+        if offset < 0:
+            raise ProviderRequestError("cursor must be a nonnegative integer")
+        rows = [
+            item
+            for item in self._items
+            if item.status == status and (vertical is None or item.vertical == vertical)
+        ]
+        query = str((filters or {}).get("q") or "").strip().casefold()
+        if query:
+            rows = [
+                item
+                for item in rows
+                if query in item.title.casefold() or query in item.summary.casefold()
+            ]
         sort = (filters or {}).get("sort", "published_at")
         if sort == "score":
             rows.sort(key=lambda item: item.scores.get("quality", 0), reverse=True)
@@ -85,7 +111,13 @@ class L2HttpContentReadProvider:
         self.api_key = api_key
         self.timeout = timeout
 
-    def _request_json(self, path: str, query: dict | None = None) -> dict:
+    def _request_json(
+        self,
+        path: str,
+        query: dict | None = None,
+        *,
+        not_found_is_missing: bool = False,
+    ) -> dict:
         url = f"{self.base_url}{path}"
         if query:
             url = f"{url}?{urllib.parse.urlencode({k: v for k, v in query.items() if v is not None})}"
@@ -97,8 +129,14 @@ class L2HttpContentReadProvider:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            if exc.code == 404:
+            if exc.code == 404 and not_found_is_missing:
                 raise KeyError(path) from exc
+            if exc.code == 400:
+                raise ProviderRequestError(f"L2 provider rejected request: {path}") from exc
+            if exc.code in {401, 403}:
+                raise ProviderConfigurationError(
+                    f"L2 provider authorization failed: {path}"
+                ) from exc
             raise ProviderUnavailable(
                 f"L2 provider returned HTTP {exc.code}: {path}"
             ) from exc
@@ -115,16 +153,36 @@ class L2HttpContentReadProvider:
     ) -> Page:
         data = self._request_json(
             "/content",
-            {"vertical": vertical, "status": status, "cursor": cursor, "limit": limit, "sort": (filters or {}).get("sort")},
+            {
+                "vertical": vertical,
+                "status": status,
+                "cursor": cursor,
+                "limit": limit,
+                "sort": (filters or {}).get("sort"),
+                "q": (filters or {}).get("q"),
+            },
         )
-        return Page.model_validate(data)
+        try:
+            return Page.model_validate(data)
+        except ValidationError as exc:
+            raise ProviderUnavailable("L2 content list response is invalid") from exc
 
     def get(self, content_id: str) -> ContentDetail:
-        return ContentDetail.model_validate(self._request_json(f"/content/{urllib.parse.quote(content_id, safe="")}"))
+        data = self._request_json(
+            f"/content/{urllib.parse.quote(content_id, safe='')}",
+            not_found_is_missing=True,
+        )
+        try:
+            return ContentDetail.model_validate(data)
+        except ValidationError as exc:
+            raise ProviderUnavailable("L2 content detail response is invalid") from exc
 
     def recommend(self, user_id: int, vertical: str | None = None, limit: int = 10) -> list[ContentSummary]:
         data = self._request_json("/recommend", {"user_id": user_id, "vertical": vertical, "limit": limit})
-        return [ContentSummary.model_validate(item) for item in data.get("items", data)]
+        try:
+            return [ContentSummary.model_validate(item) for item in data.get("items", data)]
+        except (TypeError, ValidationError) as exc:
+            raise ProviderUnavailable("L2 recommendation response is invalid") from exc
 
     def companion(self, content_id: str, question: str) -> Iterator[str]:
         data = self._request_json("/companion", {"content_id": content_id, "question": question})
@@ -138,6 +196,6 @@ def get_content_provider() -> ContentReadProvider:
     settings = get_settings()
     if not settings.l3_use_stub_l2:
         if not settings.l2_base_url:
-            raise ProviderUnavailable("L2_BASE_URL is required when L3_USE_STUB_L2=false")
+            raise ProviderConfigurationError("L2_BASE_URL is required when L3_USE_STUB_L2=false")
         return L2HttpContentReadProvider(settings.l2_base_url, api_key=settings.l2_api_key)
     return StubContentReadProvider()

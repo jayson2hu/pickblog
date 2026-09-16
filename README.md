@@ -234,9 +234,46 @@ Public API content and taxonomy primitives return quota context at the response 
 - S5 API/MCP/i18n: `/v1` primitives, API key lifecycle and quota checks, MCP `today/search/item` wrappers, shared public field filtering, bilingual UI routes, and SEO metadata.
 
 M2 browser/API integration and the L2 HTTP service are now implemented and verified
-locally without API mocks against the retained M1 SQLite result. Remaining work
-includes real authentication and account isolation, official Paddle
-checkout/webhook handling, MCP protocol transport, dependency upgrades, and full
-PostgreSQL/Redis/Arq/email/real-model integration. The current stub/sandbox paths do
-not become production-ready through configuration alone. See the platform M2 record
-for current evidence.
+locally without API mocks against the retained M1 SQLite result. M3 adds persistent
+per-user account isolation, authentication failure boundaries, and the secure
+frontend dependency baseline. Remaining work includes a real identity provider,
+official Paddle checkout/webhook handling, MCP protocol transport, and full
+PostgreSQL/Redis/Arq/email/real-model integration. The current development and
+sandbox paths do not become production-ready through configuration alone. See the
+platform M2 and M3 records for current evidence.
+
+## M3 Account Isolation And Secure Frontend Baseline
+
+The development email login no longer maps every address to user 1. In
+`L3_AUTH_LOGIN_MODE=development`, normalized email addresses resolve to stable,
+distinct users in both the memory and SQLAlchemy repositories. Interests, follows,
+bookmarks, reading metrics, subscriptions, API keys, revocation, and usage are
+scoped by the authenticated user ID.
+
+`L3_AUTH_LOGIN_MODE=external` disables `POST /api/auth/login`; this is the
+required final-preflight setting so a production-like configuration cannot accept
+an arbitrary email as verified. It is an integration boundary, not a claim that a
+real identity provider has been implemented. A real OIDC/magic-link provider and
+credential lifecycle remain outside this milestone.
+
+JWT decoding returns 401 for expired, tampered, malformed, or incomplete bearer
+tokens. Final preflight now includes an explicit auth check:
+
+```sh
+L3_AUTH_LOGIN_MODE=external python scripts/l3_preflight.py --final
+```
+
+Reader Web now uses Next.js 16.3.5, PostCSS 8.5.28, and Playwright 1.63.0.
+`npm audit --audit-level=low` reports zero vulnerabilities. Dynamic route
+`params` and `searchParams` use the Next 16 async contract. For restricted
+Ubuntu hosts, Playwright may use an already installed browser without changing the
+default behavior:
+
+```sh
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chrome-headless-shell npm run test:e2e
+```
+
+M3 acceptance evidence is recorded in the platform
+`M3_ACCOUNT_ISOLATION.md` document. PostgreSQL validation used a disposable
+database bound only to localhost; real authentication, production billing, real
+email, and production databases were not contacted.

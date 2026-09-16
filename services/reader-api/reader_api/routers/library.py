@@ -53,7 +53,7 @@ def bookmark(payload: BookmarkRequest, user: User = Depends(current_user)) -> di
     repo = get_repository()
     saved = repo.add_bookmark(user.id, payload.content_id, payload.note, payload.highlights)
     repo.save_reading_event(user.id, payload.content_id, "bookmark")
-    return {"ok": True, "bookmark": saved, "north_star": repo.north_star()}
+    return {"ok": True, "bookmark": saved, "north_star": repo.north_star(user.id)}
 
 
 @router.get("/bookmarks")

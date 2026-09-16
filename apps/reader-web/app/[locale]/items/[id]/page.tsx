@@ -7,12 +7,13 @@ import { ReadingActions } from "../../../../components/ReadingActions";
 import { ScoreExplainer } from "../../../../components/ScoreExplainer";
 import { getItem } from "../../../../lib/api";
 
-type Props = { params: { locale: string; id: string } };
+type Props = { params: Promise<{ locale: string; id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const item = await getItem(params.id);
+  const { locale, id } = await params;
+  const item = await getItem(id);
   if (!item) return {};
-  const title = params.locale === "zh" ? item.translations.zh?.title ?? item.title : item.title;
+  const title = locale === "zh" ? item.translations.zh?.title ?? item.title : item.title;
   return {
     title: `${title} | CodePick`,
     description: item.summary,
@@ -22,14 +23,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ItemPage({ params }: Props) {
-  const item = await getItem(params.id);
+  const { locale, id } = await params;
+  const item = await getItem(id);
   if (!item) notFound();
-  const translated = params.locale === "zh" ? item.translations.zh : undefined;
+  const translated = locale === "zh" ? item.translations.zh : undefined;
   const title = translated?.title ?? item.title;
   const summary = translated?.base_analysis.summary ?? item.base_analysis.summary;
   const viewpoints = translated?.base_analysis.viewpoints ?? item.base_analysis.viewpoints;
   const quotes = translated?.base_analysis.quotes ?? item.base_analysis.quotes;
-  const localeDate = new Date(item.published_at).toLocaleDateString(params.locale === "zh" ? "zh-CN" : "en-US");
+  const localeDate = new Date(item.published_at).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-US");
 
   return (
     <article className="grid gap-8">
@@ -51,28 +53,28 @@ export default async function ItemPage({ params }: Props) {
           <p className="page-subtitle">{summary}</p>
           <div className="mt-5 flex flex-wrap gap-3">
             <a className="primary-button" href={item.url} target="_blank" rel="noopener noreferrer">
-              {params.locale === "zh" ? "\u6253\u5f00\u539f\u6587" : "Open original"}
+              {locale === "zh" ? "\u6253\u5f00\u539f\u6587" : "Open original"}
             </a>
-            <a className="secondary-button" href={`/${params.locale}/pricing`}>
-              {params.locale === "zh" ? "\u67e5\u770b Pro" : "Compare Pro"}
+            <a className="secondary-button" href={`/${locale}/pricing`}>
+              {locale === "zh" ? "\u67e5\u770b Pro" : "Compare Pro"}
             </a>
           </div>
         </div>
         <aside className="self-start">
           <CoverThumb source={item.source} vertical={item.vertical} thumbnail={item.thumbnail} />
           <div className="tool-panel mt-4">
-            <p className="metric-label">{params.locale === "zh" ? "\u5165\u9009\u7406\u7531" : "Why this was picked"}</p>
-            <p className="mt-2 text-sm leading-6 text-muted">{item.reason?.[params.locale as "en" | "zh"] ?? item.reason?.en}</p>
+            <p className="metric-label">{locale === "zh" ? "\u5165\u9009\u7406\u7531" : "Why this was picked"}</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{item.reason?.[locale as "en" | "zh"] ?? item.reason?.en}</p>
           </div>
         </aside>
       </header>
 
-      <ScoreExplainer scores={item.scores} locale={params.locale} />
-      <BilingualBody item={item} locale={params.locale} />
+      <ScoreExplainer scores={item.scores} locale={locale} />
+      <BilingualBody item={item} locale={locale} />
 
       <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="tool-panel">
-          <h2 className="section-title">{params.locale === "zh" ? "\u89c2\u70b9" : "Viewpoints"}</h2>
+          <h2 className="section-title">{locale === "zh" ? "\u89c2\u70b9" : "Viewpoints"}</h2>
           <ul className="mt-4 grid gap-3">
             {viewpoints.map((point, index) => (
               <li key={point} className="flex gap-3 rounded-md bg-panel p-3 text-muted">
@@ -86,8 +88,8 @@ export default async function ItemPage({ params }: Props) {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-        <ReadingActions contentId={item.id} locale={params.locale} />
-        <CompanionWidget contentId={item.id} locale={params.locale} />
+        <ReadingActions contentId={item.id} locale={locale} />
+        <CompanionWidget contentId={item.id} locale={locale} />
       </div>
     </article>
   );

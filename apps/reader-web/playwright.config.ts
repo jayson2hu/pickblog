@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const launchOptions = executablePath ? { executablePath } : undefined;
 const port = process.env.PLAYWRIGHT_PORT ?? "3100";
 const baseURL = `http://127.0.0.1:${port}`;
 
@@ -9,7 +11,8 @@ export default defineConfig({
   fullyParallel: true,
   use: {
     baseURL,
-    trace: "on-first-retry"
+    trace: "on-first-retry",
+    launchOptions
   },
   webServer:
     process.env.PLAYWRIGHT_EXTERNAL_SERVER === "1"

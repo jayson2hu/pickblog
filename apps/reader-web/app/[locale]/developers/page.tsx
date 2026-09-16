@@ -1,8 +1,9 @@
 import { ApiKeyPanel } from "../../../components/ApiKeyPanel";
 import { ApiUsageChart } from "../../../components/ApiUsageChart";
 
-export default function DevelopersPage({ params }: { params: { locale: string } }) {
-  const isZh = params.locale === "zh";
+export default async function DevelopersPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const isZh = locale === "zh";
   return (
     <section className="grid gap-8">
       <header>
@@ -28,9 +29,9 @@ export default function DevelopersPage({ params }: { params: { locale: string } 
               <p>MCP: today / search / item</p>
             </div>
           </section>
-          <ApiUsageChart locale={params.locale} />
+          <ApiUsageChart locale={locale} />
         </div>
-        <ApiKeyPanel locale={params.locale} />
+        <ApiKeyPanel locale={locale} />
       </div>
     </section>
   );

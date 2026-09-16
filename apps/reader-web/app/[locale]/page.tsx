@@ -36,21 +36,23 @@ export default async function Home({
   params,
   searchParams
 }: {
-  params: { locale: string };
-  searchParams?: { vertical?: string; sort?: string };
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ vertical?: string; sort?: string }>;
 }) {
-  const t = copy[params.locale as "en" | "zh"] ?? copy.en;
-  const currentSort = normalizeSort(searchParams?.sort);
-  const currentVertical = searchParams?.vertical;
+  const { locale } = await params;
+  const query: { vertical?: string; sort?: string } = searchParams ? await searchParams : {};
+  const t = copy[locale as "en" | "zh"] ?? copy.en;
+  const currentSort = normalizeSort(query.sort);
+  const currentVertical = query.vertical;
   const page = await getFeedPage({ vertical: currentVertical, sort: currentSort });
   const items = page.items;
-  const taxonomy = (await getTaxonomy(params.locale)) ?? fallbackTaxonomyFromFeed(items, params.locale);
+  const taxonomy = (await getTaxonomy(locale)) ?? fallbackTaxonomyFromFeed(items, locale);
   const top = items[0];
   const rest = items.slice(1);
 
   return (
     <section className="grid gap-8">
-      <DismissibleHero locale={params.locale}>
+      <DismissibleHero locale={locale}>
         <div className="hero-band grid gap-6 lg:grid-cols-[1fr_320px] lg:items-end">
           <div>
             <p className="page-kicker">{t.kicker}</p>
@@ -67,11 +69,11 @@ export default async function Home({
             <div className="tool-panel">
               <p className="metric-label">{t.featured}</p>
               <h2 className="mt-2 text-xl font-bold tracking-normal">
-                <TrackedContentLink contentId={top.id} href={`/${params.locale}/items/${top.id}`}>
+                <TrackedContentLink contentId={top.id} href={`/${locale}/items/${top.id}`}>
                   {top.title}
                 </TrackedContentLink>
               </h2>
-              <p className="mt-3 text-sm leading-6 text-muted">{top.reason?.[params.locale as "en" | "zh"] ?? top.reason?.en}</p>
+              <p className="mt-3 text-sm leading-6 text-muted">{top.reason?.[locale as "en" | "zh"] ?? top.reason?.en}</p>
             </div>
           ) : null}
         </div>
@@ -84,15 +86,15 @@ export default async function Home({
             <h1 className="section-title">{t.title}</h1>
             <p className="mt-1 text-sm text-muted">{t.subtitle}</p>
           </header>
-          <FeedFilters locale={params.locale} categories={taxonomy.categories} currentVertical={currentVertical} currentSort={currentSort} />
-          {top ? <ContentCard item={top} locale={params.locale} featured /> : null}
+          <FeedFilters locale={locale} categories={taxonomy.categories} currentVertical={currentVertical} currentSort={currentSort} />
+          {top ? <ContentCard item={top} locale={locale} featured /> : null}
           {rest.map((item) => (
-            <ContentCard key={item.id} item={item} locale={params.locale} />
+            <ContentCard key={item.id} item={item} locale={locale} />
           ))}
           {!top ? <div className="tool-panel text-sm font-semibold text-muted">{t.empty}</div> : null}
-          <LoadMore locale={params.locale} initialCursor={page.next_cursor} vertical={currentVertical} sort={currentSort} />
+          <LoadMore locale={locale} initialCursor={page.next_cursor} vertical={currentVertical} sort={currentSort} />
         </div>
-        <Sidebar locale={params.locale} />
+        <Sidebar locale={locale} />
       </div>
     </section>
   );

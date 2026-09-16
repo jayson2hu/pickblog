@@ -11,14 +11,14 @@ ALGORITHM = "HS256"
 PLAN_ORDER = {"free": 0, "pro": 1}
 
 
-def issue_token(user: User) -> str:
+def issue_token(user: User, expires_delta: timedelta | None = None) -> str:
     settings = get_settings()
     payload = {
         "sub": str(user.id),
         "email": user.email,
         "plan": user.plan,
         "locale": user.locale,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=12),
+        "exp": datetime.now(timezone.utc) + (expires_delta if expires_delta is not None else timedelta(hours=12)),
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
 
@@ -29,11 +29,15 @@ def current_user(authorization: str | None = Header(default=None)) -> User:
     token = authorization.removeprefix("Bearer ").strip()
     try:
         payload = jwt.decode(token, get_settings().jwt_secret, algorithms=[ALGORITHM])
-    except JWTError as exc:
+        subject = int(payload["sub"])
+        email = payload["email"]
+        if not isinstance(email, str) or not email.strip() or "exp" not in payload:
+            raise ValueError("missing required token claims")
+    except (JWTError, KeyError, TypeError, ValueError) as exc:
         raise HTTPException(status_code=401, detail="invalid bearer token") from exc
     return User(
-        id=int(payload["sub"]),
-        email=payload["email"],
+        id=subject,
+        email=email,
         plan=payload.get("plan", "free"),
         locale=payload.get("locale", "en"),
     )

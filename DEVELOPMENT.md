@@ -75,3 +75,33 @@ PLAYWRIGHT_PORT=3200 npm run test:e2e:m2
 提交包括当前源码、测试、迁移、配置示例与项目文档。依赖目录、构建产物、本地数据库、采集运行数据、日志和凭据不随仓库分发，需要在新环境重新安装或配置。
 
 各层状态与验收证据见项目 README 和 docs；本文提供恢复开发的入口，不代表本次发布重新完成生产环境验收。
+
+## M3 用户隔离与认证模式
+
+本地默认 `L3_AUTH_LOGIN_MODE=development`。该模式仍是开发便利登录，但每个规范化
+邮箱会创建或读取独立用户，不再固定为 `user_id=1`。使用 SQLAlchemy 后端时用户
+记录和所有账户状态都保存在 `DATABASE_URL` 指向的 L3 数据库中：
+
+```sh
+L3_AUTH_LOGIN_MODE=development L3_REPOSITORY_BACKEND=sqlalchemy L3_QUOTA_BACKEND=sqlalchemy DATABASE_URL=postgresql+psycopg://codepick:codepick@127.0.0.1:5432/codepick_l3 .venv/bin/python scripts/run_reader_api.py
+```
+
+生产型预检必须设置 `L3_AUTH_LOGIN_MODE=external`。此时开发邮箱登录端点返回 503，
+防止把任意邮箱当成已验证身份。该设置只关闭开发登录；真实 OIDC、magic link 或其他
+身份提供商仍需后续接入。
+
+Reader Web 已升级到 Next.js 16.3.5，要求 Node.js 20.9 或更高版本。恢复依赖和检查：
+
+```sh
+cd apps/reader-web
+npm ci
+npm audit --audit-level=low
+NEXT_TELEMETRY_DISABLED=1 npm run typecheck
+NEXT_TELEMETRY_DISABLED=1 npm run build
+npm run test:e2e
+```
+
+标准 Ubuntu 可用 `npx playwright install --with-deps chromium` 安装浏览器及系统库。
+没有 sudo 时，可单独提供浏览器和共享库，并通过
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` 与 `LD_LIBRARY_PATH` 指定；不要把下载的
+浏览器、deb 或解压目录提交到仓库。

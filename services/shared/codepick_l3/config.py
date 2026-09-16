@@ -5,6 +5,7 @@ import os
 
 class Settings(BaseModel):
     jwt_secret: str = "dev-secret"
+    auth_login_mode: str = "development"
     paddle_webhook_secret: str = "dev-webhook-secret"
     companion_free_daily: int = 5
     api_rate_free_rpm: int = 20
@@ -30,6 +31,7 @@ class Settings(BaseModel):
 def get_settings() -> Settings:
     return Settings(
         jwt_secret=os.getenv("JWT_SECRET", "dev-secret"),
+        auth_login_mode=os.getenv("L3_AUTH_LOGIN_MODE", "development").lower(),
         paddle_webhook_secret=os.getenv("PADDLE_WEBHOOK_SECRET", "dev-webhook-secret"),
         companion_free_daily=int(os.getenv("COMPANION_FREE_DAILY", "5")),
         api_rate_free_rpm=int(os.getenv("API_RATE_FREE_RPM", "20")),

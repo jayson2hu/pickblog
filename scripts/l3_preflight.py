@@ -37,11 +37,17 @@ def evaluate_preflight(final: bool = False) -> dict:
     repository_backend = os.getenv("L3_REPOSITORY_BACKEND", "memory").lower()
     quota_backend = os.getenv("L3_QUOTA_BACKEND", repository_backend).lower()
     email_provider = os.getenv("EMAIL_PROVIDER", "mock").lower()
+    auth_login_mode = os.getenv("L3_AUTH_LOGIN_MODE", "development").lower()
     billing_environment = os.getenv("BILLING_ENVIRONMENT", "sandbox").lower()
     use_stub_l2 = os.getenv("L3_USE_STUB_L2", "true").lower() == "true"
     database_ready = _postgres_database_url() if final else _configured("DATABASE_URL")
 
     checks = [
+        _check(
+            "auth",
+            auth_login_mode == "external" if final else auth_login_mode in {"development", "external"},
+            "dev may use development email login; final requires L3_AUTH_LOGIN_MODE=external",
+        ),
         _check("jwt_secret", not final or _not_default_secret("JWT_SECRET", "dev-secret"), "JWT_SECRET must be non-default for final integration"),
         _check(
             "content_provider",

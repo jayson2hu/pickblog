@@ -107,6 +107,7 @@ def test_readiness_degrades_final_like_defaults_and_requires_email_sender(monkey
     monkeypatch.setenv("EMAIL_PROVIDER", "resend")
     monkeypatch.setenv("RESEND_API_KEY", "resend-key")
     monkeypatch.setenv("EMAIL_FROM", "")
+    monkeypatch.setenv("L3_AUTH_LOGIN_MODE", "external")
     monkeypatch.setenv("ARQ_REDIS_HOST", "redis")
     monkeypatch.setenv("ARQ_REDIS_PORT", "6379")
     reset_settings_cache()
@@ -278,6 +279,109 @@ def test_login_ignores_client_supplied_plan_and_uses_subscription_state() -> Non
     assert response.status_code == 200
     assert response.json()["user"]["plan"] == "pro"
     get_repository().set_subscription_plan(1, "free")
+
+
+def test_development_login_uses_stable_distinct_user_identities() -> None:
+    first = reader.post("/api/auth/login", json={"email": "isolation-a@example.com", "locale": "en"})
+    second = reader.post("/api/auth/login", json={"email": "isolation-b@example.com", "locale": "zh"})
+    repeated = reader.post("/api/auth/login", json={"email": "ISOLATION-A@example.com", "locale": "zh"})
+
+    assert first.status_code == second.status_code == repeated.status_code == 200
+    first_user = first.json()["user"]
+    second_user = second.json()["user"]
+    assert first_user["id"] != second_user["id"]
+    assert repeated.json()["user"]["id"] == first_user["id"]
+    assert repeated.json()["user"]["email"] == "isolation-a@example.com"
+    assert repeated.json()["user"]["locale"] == "zh"
+
+
+def test_external_auth_mode_disables_unverified_email_login(monkeypatch) -> None:
+    monkeypatch.setenv("L3_AUTH_LOGIN_MODE", "external")
+    reset_settings_cache()
+    response = reader.post("/api/auth/login", json={"email": "anyone@example.com", "locale": "en"})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "development email login is disabled"
+    assert reader.get("/api/ready").json()["checks"]["auth"] == {"login_mode": "external", "ready": True}
+    monkeypatch.setenv("L3_AUTH_LOGIN_MODE", "development")
+    reset_settings_cache()
+
+
+def test_jwt_rejects_tampered_expired_and_malformed_tokens() -> None:
+    valid = issue_token(User(id=7001, email="jwt@example.com", plan="free"))
+    header, payload, signature = valid.split(".")
+    tampered_signature = ("A" if signature[0] != "A" else "B") + signature[1:]
+    expired = issue_token(User(id=7001, email="jwt@example.com", plan="free"), expires_delta=timedelta(seconds=-1))
+
+    for candidate in [f"{header}.{payload}.{tampered_signature}", expired, "not-a-jwt"]:
+        response = reader.get("/api/me", headers={"Authorization": f"Bearer {candidate}"})
+        assert response.status_code == 401
+        assert response.json()["detail"] == "invalid bearer token"
+
+
+def test_two_users_cannot_see_or_mutate_each_others_account_state() -> None:
+    first = reader.post("/api/auth/login", json={"email": "tenant-a@example.com", "locale": "en"}).json()
+    second = reader.post("/api/auth/login", json={"email": "tenant-b@example.com", "locale": "en"}).json()
+    first_id = first["user"]["id"]
+    second_id = second["user"]["id"]
+    first_headers = {"Authorization": f"Bearer {first['token']}"}
+    second_headers = {"Authorization": f"Bearer {second['token']}"}
+    assert first_id != second_id
+
+    first_tags = ["ai", "backend", "python", "postgres", "agents"]
+    second_tags = ["data", "infra", "product", "security", "testing"]
+    assert reader.post("/api/interests", json={"tags": first_tags}, headers=first_headers).status_code == 200
+    assert reader.post("/api/interests", json={"tags": second_tags}, headers=second_headers).status_code == 200
+    assert set(reader.get("/api/interests", headers=first_headers).json()["tags"]) == set(first_tags)
+    assert set(reader.get("/api/interests", headers=second_headers).json()["tags"]) == set(second_tags)
+
+    assert reader.post(
+        "/api/bookmarks",
+        json={"content_id": "cp-001", "note": "tenant-a-only", "highlights": ["a"]},
+        headers=first_headers,
+    ).status_code == 200
+    assert reader.post(
+        "/api/bookmarks",
+        json={"content_id": "cp-001", "note": "tenant-b-only", "highlights": ["b"]},
+        headers=second_headers,
+    ).status_code == 200
+    assert [item["note"] for item in reader.get("/api/bookmarks", headers=first_headers).json()["items"]] == ["tenant-a-only"]
+    assert [item["note"] for item in reader.get("/api/bookmarks", headers=second_headers).json()["items"]] == ["tenant-b-only"]
+
+    assert reader.post("/api/events", json={"content_id": "cp-001", "type": "click"}, headers=first_headers).status_code == 200
+    first_event = reader.post("/api/events", json={"content_id": "cp-001", "type": "deep_read"}, headers=first_headers)
+    second_event = reader.post("/api/events", json={"content_id": "cp-001", "type": "click"}, headers=second_headers)
+    assert first_event.json()["north_star"]["reading_events_total"] == 3
+    assert second_event.json()["north_star"]["reading_events_total"] == 2
+    assert first_event.json()["north_star"]["deep_read_closed_loop_events"] == 2
+    assert second_event.json()["north_star"]["deep_read_closed_loop_events"] == 1
+
+    first_follow = reader.post("/api/follow", json={"target_type": "source", "target_id": "tenant-a-source"}, headers=first_headers).json()
+    second_follow = reader.post("/api/follow", json={"target_type": "source", "target_id": "tenant-b-source"}, headers=second_headers).json()
+    assert {item["target_id"] for item in first_follow["follows"]} == {"tenant-a-source"}
+    assert {item["target_id"] for item in second_follow["follows"]} == {"tenant-b-source"}
+
+    repo = get_repository()
+    repo.set_subscription_plan(first_id, "pro")
+    repo.set_subscription_plan(second_id, "free")
+    assert reader.get("/api/me", headers=first_headers).json()["plan"] == "pro"
+    assert reader.get("/api/me", headers=second_headers).json()["plan"] == "free"
+
+    first_key = reader.post("/api/api-keys", json={"scopes": ["read"]}, headers=first_headers).json()
+    second_key = reader.post("/api/api-keys", json={"scopes": ["read"]}, headers=second_headers).json()
+    first_keys = reader.get("/api/api-keys", headers=first_headers).json()["items"]
+    second_keys = reader.get("/api/api-keys", headers=second_headers).json()["items"]
+    assert first_key["prefix"] in {item["prefix"] for item in first_keys}
+    assert second_key["prefix"] not in {item["prefix"] for item in first_keys}
+    assert second_key["prefix"] in {item["prefix"] for item in second_keys}
+    assert first_key["prefix"] not in {item["prefix"] for item in second_keys}
+
+    forbidden_revoke = reader.delete(f"/api/api-keys/{first_key['prefix']}", headers=second_headers)
+    assert forbidden_revoke.status_code == 404
+    assert public.get("/v1/today", headers={"X-API-Key": first_key["key"]}).status_code == 200
+    first_usage = reader.get("/api/api-keys/usage", headers=first_headers).json()["days"]
+    second_usage = reader.get("/api/api-keys/usage", headers=second_headers).json()["days"]
+    assert sum(day["count"] for day in first_usage) == 1
+    assert sum(day["count"] for day in second_usage) == 0
 
 
 def test_stub_provider_returns_completed_fixture_and_detail_translation() -> None:
@@ -1053,6 +1157,33 @@ def test_sqlalchemy_repository_factory_closes_owned_sessions(monkeypatch) -> Non
     monkeypatch.delenv("L3_REPOSITORY_BACKEND", raising=False)
 
 
+def test_sqlalchemy_login_creates_stable_distinct_users(monkeypatch) -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine, expire_on_commit=False)
+
+    monkeypatch.setenv("L3_REPOSITORY_BACKEND", "sqlalchemy")
+    monkeypatch.setattr("codepick_l3.db.get_sessionmaker", lambda: Session)
+
+    first = reader.post("/api/auth/login", json={"email": "sql-a@example.com", "locale": "en"})
+    second = reader.post("/api/auth/login", json={"email": "sql-b@example.com", "locale": "zh"})
+    repeated = reader.post("/api/auth/login", json={"email": "SQL-A@example.com", "locale": "zh"})
+    assert first.status_code == second.status_code == repeated.status_code == 200
+    assert first.json()["user"]["id"] != second.json()["user"]["id"]
+    assert repeated.json()["user"]["id"] == first.json()["user"]["id"]
+
+    persisted = Session()
+    try:
+        users = persisted.query(UserModel).order_by(UserModel.id).all()
+        assert [(user.email, user.locale) for user in users] == [
+            ("sql-a@example.com", "zh"),
+            ("sql-b@example.com", "zh"),
+        ]
+    finally:
+        persisted.close()
+    monkeypatch.delenv("L3_REPOSITORY_BACKEND", raising=False)
+
+
 def test_reader_api_routes_persist_with_sqlalchemy_repository(monkeypatch) -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
@@ -1530,6 +1661,7 @@ def test_local_operations_files_capture_required_defaults() -> None:
     makefile = (root / "Makefile").read_text(encoding="utf-8")
 
     assert "L3_USE_STUB_L2=true" in env_text
+    assert "L3_AUTH_LOGIN_MODE=development" in env_text
     assert "BILLING_ENVIRONMENT=sandbox" in env_text
     assert "PRICE_PRO_MONTH_USD=8" in env_text
     assert "PRICE_PRO_YEAR_USD=79" in env_text
@@ -1612,6 +1744,7 @@ def test_l3_preflight_final_accepts_explicit_integration_config(monkeypatch) -> 
     monkeypatch.setenv("EMAIL_PROVIDER", "resend")
     monkeypatch.setenv("RESEND_API_KEY", "resend-key")
     monkeypatch.setenv("EMAIL_FROM", "CodePick <briefs@example.test>")
+    monkeypatch.setenv("L3_AUTH_LOGIN_MODE", "external")
     monkeypatch.setenv("ARQ_REDIS_HOST", "redis")
     monkeypatch.setenv("ARQ_REDIS_PORT", "6379")
     report = evaluate_preflight(final=True)

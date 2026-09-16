@@ -6,6 +6,7 @@ import os
 from typing import Protocol
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .models import (
@@ -26,13 +27,14 @@ from .schemas import Brief
 
 
 class L3Repository(Protocol):
+    def get_or_create_user(self, email: str, locale: str = "en") -> dict: ...
     def save_interests(self, user_id: int, tags: list[str]) -> None: ...
     def get_interests(self, user_id: int) -> dict[str, int]: ...
     def add_follow(self, user_id: int, target_type: str, target_id: str) -> list[dict[str, str]]: ...
     def add_bookmark(self, user_id: int, content_id: str, note: str | None, highlights: list[str]) -> dict: ...
     def list_bookmarks(self, user_id: int) -> list[dict]: ...
     def save_reading_event(self, user_id: int, content_id: str, event_type: str) -> dict: ...
-    def north_star(self) -> dict[str, int | float]: ...
+    def north_star(self, user_id: int | None = None) -> dict[str, int | float]: ...
     def save_brief(self, brief: Brief) -> None: ...
     def list_briefs(self) -> list[Brief]: ...
     def increment_companion_usage(self, user_id: int, day: date) -> int: ...
@@ -79,6 +81,15 @@ class InMemoryL3Repository:
     audiences: dict[str, dict] = field(default_factory=lambda: {row["code"]: dict(row) for row in DEFAULT_AUDIENCES})
     audience_categories: dict[str, list[str]] = field(default_factory=lambda: {row["code"]: [category["code"] for category in DEFAULT_CATEGORIES] for row in DEFAULT_AUDIENCES})
 
+    def get_or_create_user(self, email: str, locale: str = "en") -> dict:
+        normalized_email = email.strip().lower()
+        for user_id, profile in self.user_profiles.items():
+            if profile["email"].lower() == normalized_email:
+                return self.get_user_profile(user_id, normalized_email, locale)
+
+        user_id = max(self.user_profiles, default=0) + 1
+        return self.get_user_profile(user_id, normalized_email, locale)
+
     def save_interests(self, user_id: int, tags: list[str]) -> None:
         self.interests[user_id] = {tag: 1 for tag in tags}
 
@@ -102,9 +113,10 @@ class InMemoryL3Repository:
         self.reading_events.append(event)
         return event
 
-    def north_star(self) -> dict[str, int | float]:
-        closed_loop = [event for event in self.reading_events if event["type"] in {"deep_read", "bookmark"}]
-        total = len(self.reading_events)
+    def north_star(self, user_id: int | None = None) -> dict[str, int | float]:
+        events = [event for event in self.reading_events if user_id is None or event["user_id"] == user_id]
+        closed_loop = [event for event in events if event["type"] in {"deep_read", "bookmark"}]
+        total = len(events)
         return {
             "deep_read_closed_loop_events": len(closed_loop),
             "reading_events_total": total,
@@ -256,6 +268,43 @@ class SqlAlchemyL3Repository:
         if self.close_on_commit:
             self.session.close()
 
+    def get_or_create_user(self, email: str, locale: str = "en") -> dict:
+        normalized_email = email.strip().lower()
+        try:
+            row = self.session.scalars(select(UserModel).where(func.lower(UserModel.email) == normalized_email)).first()
+            if row is None:
+                row = UserModel(
+                    email=normalized_email,
+                    nickname=normalized_email.split("@", 1)[0],
+                    locale=locale,
+                    plan="free",
+                    audience_code=self._default_audience_code(),
+                )
+                self.session.add(row)
+                try:
+                    self.session.flush()
+                except IntegrityError:
+                    self.session.rollback()
+                    row = self.session.scalars(select(UserModel).where(func.lower(UserModel.email) == normalized_email)).first()
+                    if row is None:
+                        raise
+            row.locale = locale or row.locale
+            self.session.flush()
+            subscription = self.session.scalars(select(SubscriptionModel).where(SubscriptionModel.user_id == row.id)).first()
+            result = {
+                "id": row.id,
+                "email": row.email,
+                "nickname": row.nickname,
+                "locale": row.locale,
+                "plan": subscription.plan if subscription else "free",
+                "is_admin": bool(row.is_admin),
+                "audience_code": row.audience_code or self._default_audience_code(),
+            }
+            self._commit_if_needed()
+            return result
+        finally:
+            self._finish()
+
     def save_interests(self, user_id: int, tags: list[str]) -> None:
         try:
             self.session.query(UserInterestModel).filter(UserInterestModel.user_id == user_id).delete()
@@ -315,10 +364,15 @@ class SqlAlchemyL3Repository:
         finally:
             self._finish()
 
-    def north_star(self) -> dict[str, int | float]:
+    def north_star(self, user_id: int | None = None) -> dict[str, int | float]:
         try:
-            closed_loop_count = self.session.scalar(select(func.count()).select_from(ReadingEventModel).where(ReadingEventModel.type.in_(["deep_read", "bookmark"])))
-            total = self.session.scalar(select(func.count()).select_from(ReadingEventModel))
+            closed_loop_query = select(func.count()).select_from(ReadingEventModel).where(ReadingEventModel.type.in_(["deep_read", "bookmark"]))
+            total_query = select(func.count()).select_from(ReadingEventModel)
+            if user_id is not None:
+                closed_loop_query = closed_loop_query.where(ReadingEventModel.user_id == user_id)
+                total_query = total_query.where(ReadingEventModel.user_id == user_id)
+            closed_loop_count = self.session.scalar(closed_loop_query)
+            total = self.session.scalar(total_query)
             closed_loop = int(closed_loop_count or 0)
             event_total = int(total or 0)
             return {

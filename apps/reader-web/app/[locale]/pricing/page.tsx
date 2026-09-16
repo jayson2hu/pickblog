@@ -1,7 +1,8 @@
 import { BillingPanel } from "../../../components/BillingPanel";
 
-export default function PricingPage({ params }: { params: { locale: string } }) {
-  const isZh = params.locale === "zh";
+export default async function PricingPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const isZh = locale === "zh";
   return (
     <section className="grid gap-8">
       <header>
@@ -27,7 +28,7 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
           </ul>
         </section>
       </div>
-      <BillingPanel locale={params.locale} />
+      <BillingPanel locale={locale} />
     </section>
   );
 }

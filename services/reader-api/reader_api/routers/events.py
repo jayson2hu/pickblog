@@ -25,4 +25,4 @@ def track_event(payload: EventRequest, user: User = Depends(current_user)) -> di
         raise HTTPException(status_code=404, detail="content not found")
 
     get_repository().save_reading_event(user.id, payload.content_id, payload.type)
-    return {"ok": True, "north_star": get_repository().north_star()}
+    return {"ok": True, "north_star": get_repository().north_star(user.id)}

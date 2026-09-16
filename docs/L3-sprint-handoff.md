@@ -5,7 +5,7 @@ This file captures the sprint-level delivery notes required by the L3 plan. The 
 ## Current Verification
 
 - Full handoff gate: `python scripts/l3_verify.py` -> `L3 VERIFY: PASS`
-- Backend contracts: `108 passed`
+- Backend contracts: `119 passed` (previous independent baseline: `108 passed`)
 - Reader Web Playwright: `26 passed`
 - Migration smoke: `L3 MIGRATION: PASS`
 - Sprint smoke: `L3 PIPELINE: PASS`
@@ -58,3 +58,22 @@ This file captures the sprint-level delivery notes required by the L3 plan. The 
 - Resend or SES credentials and sender identity.
 - Paddle production checkout URL and signed webhook delivery.
 - Go/no-go execution using `docs/L3-final-integration-checklist.md`.
+
+## M3 Account Isolation And Dependency Security
+
+- Development login resolves normalized email to stable, distinct memory or
+  SQLAlchemy users instead of hard-coding user 1.
+- User-visible interests, follows, bookmarks, reading-event metrics,
+  subscriptions, API keys, revocation, and usage are user-scoped.
+- Expired, tampered, malformed, and incomplete JWTs return 401.
+- `L3_AUTH_LOGIN_MODE=external` disables arbitrary-email development login and
+  is required by final preflight; a real external identity provider remains a
+  separate integration.
+- A disposable PostgreSQL 16 acceptance run completed Alembic upgrade/downgrade
+  and a two-user API flow with 2 users, 10 interests, 2 bookmarks, 2 events, and
+  2 API keys.
+- Reader Web moved from Next 14 to Next 16.3.5, PostCSS 8.5.28, and Playwright
+  1.63.0. `npm ci`, zero-vulnerability `npm audit`, typecheck, production
+  build, and 26 Playwright tests pass.
+- Current backend evidence is 119 passed. Real OIDC/magic-link auth, production
+  Paddle, real email, and production data remain outside this acceptance.

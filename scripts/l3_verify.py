@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import shutil
 import sys
@@ -32,17 +33,21 @@ def run_reader_web_e2e() -> None:
     playwright = READER_WEB / "node_modules" / ".bin" / ("playwright.cmd" if sys.platform == "win32" else "playwright")
     args = [str(playwright), "test"]
     print(f"+ {' '.join(args)}", flush=True)
+    port = os.environ.get("PLAYWRIGHT_PORT", "3100")
+    server_env = pythonpath_env()
+    server_env["READER_USE_DEMO_FALLBACK"] = "true"
     server = subprocess.Popen(
-        npm_args("run", "dev", "--", "--hostname", "127.0.0.1", "--port", "3000"),
+        npm_args("run", "dev", "--", "--hostname", "127.0.0.1", "--port", port),
         cwd=READER_WEB,
-        env=pythonpath_env(),
+        env=server_env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
     try:
-        wait_for_reader_web(server)
+        wait_for_reader_web(server, port)
         env = pythonpath_env()
         env["PLAYWRIGHT_EXTERNAL_SERVER"] = "1"
+        env["PLAYWRIGHT_PORT"] = port
         completed = subprocess.run(
             args,
             cwd=READER_WEB,
@@ -77,14 +82,14 @@ def run_reader_web_e2e() -> None:
     write_output(completed.stdout)
 
 
-def wait_for_reader_web(server: subprocess.Popen, timeout: float = 120.0) -> None:
+def wait_for_reader_web(server: subprocess.Popen, port: str, timeout: float = 120.0) -> None:
     deadline = time.monotonic() + timeout
     last_error: Exception | None = None
     while time.monotonic() < deadline:
         if server.poll() is not None:
             raise RuntimeError(f"reader-web dev server exited early with {server.returncode}")
         try:
-            with urllib.request.urlopen("http://127.0.0.1:3000/en", timeout=2) as response:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/en", timeout=2) as response:
                 if response.status < 500:
                     return
         except Exception as exc:

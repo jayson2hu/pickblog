@@ -36,6 +36,7 @@ def l3_readiness() -> dict:
     use_real_l2 = not settings.l3_use_stub_l2
     production_billing = settings.billing_environment == "production"
     email_provider = settings.email_provider.lower()
+    auth_login_mode = settings.auth_login_mode
     database_url = os.getenv("DATABASE_URL")
     redis_host = os.getenv("ARQ_REDIS_HOST", "127.0.0.1")
     redis_port = _int_env("ARQ_REDIS_PORT", "6379")
@@ -50,6 +51,10 @@ def l3_readiness() -> dict:
     )
 
     checks = {
+        "auth": {
+            "login_mode": auth_login_mode,
+            "ready": auth_login_mode == "external" or (not final_like and auth_login_mode == "development"),
+        },
         "content_provider": {
             "mode": "stub" if settings.l3_use_stub_l2 else "l2-http",
             "ready": not use_real_l2 or _https_url(settings.l2_base_url),

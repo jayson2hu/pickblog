@@ -7,12 +7,13 @@ export const metadata = {
   description: "High-signal engineering reading, briefs, and API distribution."
 };
 
-export default function LocaleLayout({ children, params }: { children: ReactNode; params: { locale: string } }) {
+export default async function LocaleLayout({ children, params }: { children: ReactNode; params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   return (
-    <html lang={params.locale}>
+    <html lang={locale}>
       <body>
         <div className="shell">
-          <Header locale={params.locale} />
+          <Header locale={locale} />
           <main className="page-frame">{children}</main>
         </div>
       </body>

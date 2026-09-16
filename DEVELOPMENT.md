@@ -34,6 +34,8 @@ npm run dev
 
 前端检查：`npm run typecheck`。完整交接验证：先在前端目录执行 `npx playwright install chromium`，再回仓库根目录运行 `python scripts/l3_verify.py`。真实 L2、支付、邮件和基础设施联调的门禁见 docs/L3-final-integration-checklist.md。
 
+Playwright 默认在 `127.0.0.1:3100` 启动独立 reader-web，避免误复用宿主机 3000 端口；可用 `PLAYWRIGHT_PORT` 覆盖。最小 Ubuntu 镜像还需安装 Playwright 报告的 Chromium 共享库。
+
 ## 交接范围
 
 提交包括当前源码、测试、迁移、配置示例与项目文档。依赖目录、构建产物、本地数据库、采集运行数据、日志和凭据不随仓库分发，需要在新环境重新安装或配置。

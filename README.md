@@ -1,5 +1,7 @@
 ﻿# CodePick L3
 
+[2026-09-12 当前验证与剩余工作](docs/2026-09-12-continuation.md) · [平台项目进度](../codepick-docs/PROJECT_STATUS.md)
+
 [异地开发指南](DEVELOPMENT.md) · [平台总文档与关联仓库](https://github.com/jayson2hu/codepick-docs)
 
 L3 implements the reader application and distribution layer with strict separation from L2. During development it uses `StubContentReadProvider`, sandbox billing, and mock email delivery.
@@ -202,5 +204,5 @@ Public API content and taxonomy primitives return quota context at the response 
 - S4 billing: sandbox checkout, signed webhook subscription sync, USD pricing invariants, and Paddle production switch path.
 - S5 API/MCP/i18n: `/v1` primitives, API key lifecycle and quota checks, MCP `today/search/item` wrappers, shared public field filtering, bilingual UI routes, and SEO metadata.
 
-Remaining production integration work: configure a real PostgreSQL `DATABASE_URL`, real Resend/SES and Arq runtime credentials, and replace stubs only during final L2/payment integration.
+Remaining work includes real authentication and account isolation, browser/API integration, the L2 HTTP service, official Paddle checkout/webhook handling, MCP protocol transport, and dependency upgrades, in addition to PostgreSQL, Redis/Arq, and email integration. The current stub/sandbox paths do not become production-ready through configuration alone. See the dated continuation record above for current evidence.
 

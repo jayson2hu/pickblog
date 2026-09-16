@@ -6,13 +6,15 @@ export default defineConfig({
   fullyParallel: true,
   use: {
     baseURL: "http://127.0.0.1:3000",
+    channel: process.env.PLAYWRIGHT_BROWSER_CHANNEL,
     trace: "on-first-retry"
   },
   webServer:
     process.env.PLAYWRIGHT_EXTERNAL_SERVER === "1"
       ? undefined
       : {
-          command: "npm --prefix D:\\vscodefile\\pickblog\\apps\\reader-web run dev -- --hostname 127.0.0.1 --port 3000",
+          command: "npm run dev -- --hostname 127.0.0.1 --port 3000",
+          cwd: __dirname,
           url: "http://127.0.0.1:3000/en",
           reuseExistingServer: process.env.CI !== "1",
           timeout: 120_000

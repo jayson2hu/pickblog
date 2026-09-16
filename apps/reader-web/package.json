@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:m2": "playwright test --config=playwright.m2.config.ts"
   },
   "dependencies": {
     "next": "^14.2.0",

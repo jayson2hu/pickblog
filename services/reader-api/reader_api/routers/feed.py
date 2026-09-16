@@ -17,4 +17,4 @@ def feed(
 ) -> dict:
     page = get_content_provider().list(vertical=vertical, cursor=cursor, limit=limit, filters={"sort": sort})
     items = completed_public_items(page.items)
-    return Page(items=items, next_cursor=page.next_cursor, total=len(items)).model_dump(mode="json")
+    return Page(items=items, next_cursor=page.next_cursor, total=page.total).model_dump(mode="json")

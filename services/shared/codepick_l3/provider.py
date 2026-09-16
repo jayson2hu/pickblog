@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterator, Protocol
 import json
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -95,7 +96,13 @@ class L2HttpContentReadProvider:
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
-        except Exception as exc:
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                raise KeyError(path) from exc
+            raise ProviderUnavailable(
+                f"L2 provider returned HTTP {exc.code}: {path}"
+            ) from exc
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             raise ProviderUnavailable(f"L2 provider request failed: {path}") from exc
 
     def list(
@@ -113,7 +120,7 @@ class L2HttpContentReadProvider:
         return Page.model_validate(data)
 
     def get(self, content_id: str) -> ContentDetail:
-        return ContentDetail.model_validate(self._request_json(f"/content/{urllib.parse.quote(content_id)}"))
+        return ContentDetail.model_validate(self._request_json(f"/content/{urllib.parse.quote(content_id, safe="")}"))
 
     def recommend(self, user_id: int, vertical: str | None = None, limit: int = 10) -> list[ContentSummary]:
         data = self._request_json("/recommend", {"user_id": user_id, "vertical": vertical, "limit": limit})

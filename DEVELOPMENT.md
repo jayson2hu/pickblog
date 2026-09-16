@@ -4,7 +4,7 @@
 
 ## 克隆与环境
 
-需要 Git 和 Python 3.11 或更新版本。以下命令都从本仓库根目录执行。
+需要 Git、Python 3.12 和 Node.js 20 或更新版本。以下命令都从本仓库根目录执行。
 
 ```sh
 git clone https://github.com/jayson2hu/pickblog.git
@@ -35,6 +35,40 @@ npm run dev
 前端检查：`npm run typecheck`。完整交接验证：先在前端目录执行 `npx playwright install chromium`，再回仓库根目录运行 `python scripts/l3_verify.py`。真实 L2、支付、邮件和基础设施联调的门禁见 docs/L3-final-integration-checklist.md。
 
 Playwright 默认在 `127.0.0.1:3100` 启动独立 reader-web，避免误复用宿主机 3000 端口；可用 `PLAYWRIGHT_PORT` 覆盖。最小 Ubuntu 镜像还需安装 Playwright 报告的 Chromium 共享库。
+
+## M2 真实 L2 联调
+
+先按 agentic 文档在 `127.0.0.1:8200` 启动 L2 HTTP，再启动 Reader API：
+
+```sh
+L3_USE_STUB_L2=false \
+L2_BASE_URL=http://127.0.0.1:8200 \
+READER_API_HOST=127.0.0.1 \
+READER_API_PORT=8100 \
+.venv/bin/python scripts/run_reader_api.py
+```
+
+前端使用同源代理，关闭演示回退：
+
+```sh
+cd apps/reader-web
+READER_API_BASE=http://127.0.0.1:8100 \
+READER_API_PROXY_TARGET=http://127.0.0.1:8100 \
+READER_USE_DEMO_FALLBACK=false \
+NEXT_TELEMETRY_DISABLED=1 \
+npm run dev -- --hostname 127.0.0.1 --port 3200
+```
+
+M2 专用浏览器测试不拦截 API：
+
+```sh
+PLAYWRIGHT_PORT=3200 npm run test:e2e:m2
+```
+
+正常测试验证 M1 文章列表、详情、六维评分和中文翻译。停止 L2 后运行
+`m2-tests/reader-upstream-error.spec.ts`，页面必须显示可重试错误；恢复 L2
+后无需重建 Reader API 或前端即可继续读取。真实模式下不得设置
+`READER_USE_DEMO_FALLBACK=true`。
 
 ## 交接范围
 

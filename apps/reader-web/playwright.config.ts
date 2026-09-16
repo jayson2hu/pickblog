@@ -18,6 +18,7 @@ export default defineConfig({
           command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
           url: `${baseURL}/en`,
           reuseExistingServer: false,
+          env: { ...process.env, READER_USE_DEMO_FALLBACK: "true" },
           timeout: 120_000
         },
   projects: [

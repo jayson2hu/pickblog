@@ -81,6 +81,8 @@ const fallbackItems: ContentDetail[] = [
 ];
 
 export const apiBase = process.env.READER_API_BASE ?? process.env.NEXT_PUBLIC_READER_API_BASE ?? "http://127.0.0.1:8000";
+const demoFallbackEnabled = process.env.READER_USE_DEMO_FALLBACK === "true";
+const contentFetchOptions = demoFallbackEnabled ? { next: { revalidate: 60 } } : { cache: "no-store" as const };
 
 const validSorts = new Set(["recommended", "published_at", "score"]);
 
@@ -101,7 +103,7 @@ function feedUrl(options: FeedOptions = {}) {
 
 export async function getFeedPage(options: FeedOptions = {}): Promise<FeedPage> {
   try {
-    const response = await fetch(feedUrl(options), { next: { revalidate: 60 } });
+    const response = await fetch(feedUrl(options), contentFetchOptions);
     if (!response.ok) throw new Error("feed request failed");
     const page = await response.json();
     return {
@@ -109,7 +111,8 @@ export async function getFeedPage(options: FeedOptions = {}): Promise<FeedPage> 
       next_cursor: page.next_cursor ?? null,
       total: page.total
     };
-  } catch {
+  } catch (error) {
+    if (!demoFallbackEnabled) throw error;
     const filtered = options.vertical ? fallbackItems.filter((item) => item.vertical === options.vertical) : fallbackItems;
     const sorted = [...filtered].sort((a, b) => {
       if (normalizeSort(options.sort) === "published_at") {
@@ -128,10 +131,12 @@ export async function getFeed(options: FeedOptions = {}): Promise<ContentSummary
 
 export async function getItem(id: string): Promise<ContentDetail | undefined> {
   try {
-    const response = await fetch(`${apiBase}/api/read/${id}`, { next: { revalidate: 60 } });
-    if (!response.ok) throw new Error("item request failed");
+    const response = await fetch(`${apiBase}/api/read/${id}`, contentFetchOptions);
+    if (response.status === 404) return undefined;
+    if (!response.ok) throw new Error(`item request failed: ${response.status}`);
     return enrichDetail(await response.json());
-  } catch {
+  } catch (error) {
+    if (!demoFallbackEnabled) throw error;
     return fallbackItems.find((item) => item.id === id);
   }
 }

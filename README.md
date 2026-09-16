@@ -70,7 +70,10 @@ npm run build
 npm run test:e2e
 ```
 
-The web app can run without the API during local UI checks because it falls back to the same stub fixture shape. In full local mode, start `reader-api` and set `READER_API_BASE`.
+The web app can run without the API during explicit demo checks when
+`READER_USE_DEMO_FALLBACK=true`. In M2 real mode, set it to `false`; failed
+Reader/L2 requests then render the retryable error boundary and never silently
+replace real content with the demo fixture.
 
 Local infrastructure:
 
@@ -136,6 +139,32 @@ SUPPORTED_LOCALES=en,zh
 ```
 
 Switching to real L2 is intentionally isolated behind `ContentReadProvider`. Set `L3_USE_STUB_L2=false`, `L2_BASE_URL`, and optional `L2_API_KEY` to use the HTTP provider.
+
+For local M2 integration, start Reader API on a loopback-only port:
+
+```bash
+L3_USE_STUB_L2=false \
+L2_BASE_URL=http://127.0.0.1:8200 \
+READER_API_HOST=127.0.0.1 \
+READER_API_PORT=8100 \
+.venv/bin/python scripts/run_reader_api.py
+```
+
+Then start reader-web with the same-origin proxy and demo fallback disabled:
+
+```bash
+cd apps/reader-web
+READER_API_BASE=http://127.0.0.1:8100 \
+READER_API_PROXY_TARGET=http://127.0.0.1:8100 \
+READER_USE_DEMO_FALLBACK=false \
+NEXT_TELEMETRY_DISABLED=1 \
+npm run dev -- --hostname 127.0.0.1 --port 3200
+```
+
+The L2 HTTP provider maps a missing item to L3 404. Network failures, timeouts and
+L2 5xx responses become retryable L3 503 responses with `Retry-After: 2`.
+`/api/*` is proxied by Next.js, so browsers do not require cross-origin access in
+the normal local topology.
 
 Set `L3_REPOSITORY_BACKEND=sqlalchemy` with `DATABASE_URL` when L3-owned state should be persisted through SQLAlchemy/PostgreSQL. Set `L3_QUOTA_BACKEND=sqlalchemy` when `/v1` API key usage should be enforced through `api_keys` and `api_usage_daily` instead of the local in-memory development store.
 
@@ -204,5 +233,10 @@ Public API content and taxonomy primitives return quota context at the response 
 - S4 billing: sandbox checkout, signed webhook subscription sync, USD pricing invariants, and Paddle production switch path.
 - S5 API/MCP/i18n: `/v1` primitives, API key lifecycle and quota checks, MCP `today/search/item` wrappers, shared public field filtering, bilingual UI routes, and SEO metadata.
 
-Remaining work includes real authentication and account isolation, browser/API integration, the L2 HTTP service, official Paddle checkout/webhook handling, MCP protocol transport, and dependency upgrades, in addition to PostgreSQL, Redis/Arq, and email integration. The current stub/sandbox paths do not become production-ready through configuration alone. See the dated continuation record above for current evidence.
-
+M2 browser/API integration and the L2 HTTP service are now implemented and verified
+locally without API mocks against the retained M1 SQLite result. Remaining work
+includes real authentication and account isolation, official Paddle
+checkout/webhook handling, MCP protocol transport, dependency upgrades, and full
+PostgreSQL/Redis/Arq/email/real-model integration. The current stub/sandbox paths do
+not become production-ready through configuration alone. See the platform M2 record
+for current evidence.

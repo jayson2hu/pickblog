@@ -81,6 +81,9 @@ PUBLIC_API_HOST=127.0.0.1 \
 PUBLIC_API_PORT=8001 \
 .venv/bin/python scripts/run_public_api.py
 
+`PUBLIC_API_HOST`、`PUBLIC_API_PORT` 和 `PUBLIC_API_RELOAD` 均由启动脚本读取；
+reload 默认关闭，适合跨进程验收和本地编排。
+
 curl --get -H 'X-API-Key: cp_test_key' \
   --data-urlencode 'q=postgres' \
   --data 'limit=10' \
@@ -97,6 +100,10 @@ curl --get -H 'X-API-Key: cp_test_key' \
 的 Public API，得到唯一命中文章并返回 `next_cursor=null`。停止 L2 后同一请求返回
 503 `l2_unavailable`、`retryable=true` 和 `Retry-After: 2`；非法游标返回 400
 `invalid_request`。服务都只绑定 `127.0.0.1`，未连接真实业务数据库或付费模型。
+另一次验收把 L3 用户、API key 和配额表迁移到一次性 PostgreSQL 16，使用真实
+L2 HTTP 与真实 Public API 进程连续搜索两次；结果仍为唯一 `id=2`，数据库中的
+`api_usage_daily.count=2`。PostgreSQL 仅绑定 `127.0.0.1:55440`，结束后容器已删除。
+
 
 ## 交接范围
 

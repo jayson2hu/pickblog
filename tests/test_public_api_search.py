@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+import runpy
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from fastapi.testclient import TestClient
+import uvicorn
 
 from codepick_l3.provider import (
     L2HttpContentReadProvider,
@@ -205,3 +208,30 @@ def test_l2_http_provider_forwards_query_and_maps_bad_request() -> None:
 
     assert seen[0]["q"] == ["Needle"]
     assert seen[0]["sort"] == ["score"]
+
+
+def test_public_api_launcher_honors_runtime_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = Path(__file__).resolve().parents[1]
+    monkeypatch.syspath_prepend(str(root / "scripts"))
+    namespace = runpy.run_path(str(root / "scripts" / "run_public_api.py"))
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    monkeypatch.setenv("PUBLIC_API_HOST", "127.0.0.2")
+    monkeypatch.setenv("PUBLIC_API_PORT", "18001")
+    monkeypatch.setenv("PUBLIC_API_RELOAD", "true")
+    monkeypatch.setattr(
+        uvicorn,
+        "run",
+        lambda app, **kwargs: calls.append((app, kwargs)),
+    )
+
+    namespace["main"]()
+
+    assert calls == [
+        (
+            "public_api.main:app",
+            {"host": "127.0.0.2", "port": 18001, "reload": True},
+        )
+    ]

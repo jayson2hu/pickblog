@@ -5,7 +5,7 @@ This file captures the sprint-level delivery notes required by the L3 plan. The 
 ## Current Verification
 
 - Full handoff gate: `python scripts/l3_verify.py` -> `L3 VERIFY: PASS`
-- Backend contracts: `126 passed` (previous independent baseline: `119 passed`)
+- Backend contracts: `127 passed` (previous independent baseline: `126 passed`)
 - Reader Web Playwright: `26 passed`
 - Migration smoke: `L3 MIGRATION: PASS`
 - Sprint smoke: `L3 PIPELINE: PASS`
@@ -47,7 +47,7 @@ This file captures the sprint-level delivery notes required by the L3 plan. The 
 - Implemented features: F8.1-F8.3, F9.1-F9.2.
 - Scope: public `/v1` API, API key lifecycle, rate limit/quota, MCP wrappers, shared public serializer, quota envelope, readiness auth, bilingual UI, Chinese copy validation, sitemap, and SEO metadata.
 - Self-test evidence: backend tests cover API key lifecycle, read-scope enforcement, ready auth without quota consumption, daily quota, RPM limit, public item field set, taxonomy quota, completed-only `/v1` and MCP filtering, MCP smoke, UTF-8 copy checks, and final checklist coverage; Playwright covers English/Chinese routes, localized controls, sitemap, and detail metadata.
-- Coverage/evidence: included in `126 passed` backend contracts and `26 passed` Playwright E2E.
+- Coverage/evidence: included in `127 passed` backend contracts and `26 passed` Playwright E2E.
 - Search now pushes `q` into the shared provider before pagination for both
   `/v1/search` and MCP `search`. Tests cover cursor-stable results, Public/MCP
   consistency, query length, invalid cursors, and HTTP query forwarding.
@@ -58,7 +58,7 @@ This file captures the sprint-level delivery notes required by the L3 plan. The 
 
 ## Final Integration Residuals
 
-- Real PostgreSQL `DATABASE_URL` with SQLAlchemy repository and quota backends.
+- Target/production PostgreSQL `DATABASE_URL` with SQLAlchemy repository and quota backends.
 - Real HTTPS L2 provider endpoint and optional `L2_API_KEY`.
 - Redis/Arq worker runtime using explicit `ARQ_REDIS_HOST` and `ARQ_REDIS_PORT`.
 - Resend or SES credentials and sender identity.
@@ -81,7 +81,7 @@ This file captures the sprint-level delivery notes required by the L3 plan. The 
 - Reader Web moved from Next 14 to Next 16.3.5, PostCSS 8.5.28, and Playwright
   1.63.0. `npm ci`, zero-vulnerability `npm audit`, typecheck, production
   build, and 26 Playwright tests pass.
-- Current backend evidence is 126 passed. Real OIDC/magic-link auth, production
+- Current backend evidence is 127 passed. Real OIDC/magic-link auth, production
   Paddle, real email, and production data remain outside this acceptance.
 
 ## Public Search And Upstream Boundary Acceptance
@@ -95,3 +95,9 @@ This file captures the sprint-level delivery notes required by the L3 plan. The 
   an invalid cursor produced `invalid_request` with HTTP 400.
 - This acceptance used FakeLLM-derived persisted data and temporary SQLite. It did
   not contact production databases, paid models, real identity, email, or billing.
+- A second run used disposable PostgreSQL 16 for L3 users, API keys, and quota
+  usage while keeping real L2 HTTP and Public API processes. Two successful search
+  calls returned content `2`, `next_cursor=null`, and persisted
+  `api_usage_daily.count=2`.
+- `scripts/run_public_api.py` now honors `PUBLIC_API_HOST`, `PUBLIC_API_PORT`, and
+  `PUBLIC_API_RELOAD`; a regression test covers the runtime mapping.

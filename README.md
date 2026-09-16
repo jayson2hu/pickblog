@@ -92,6 +92,9 @@ python scripts/run_mcp_server.py
 `docker-compose.yml` includes Postgres `pg_isready` and Redis `redis-cli ping` health checks. Use `make infra-status` before running migrations or workers when debugging local infra startup.
 
 Reader API runs on `127.0.0.1:8000`; Public API runs on `127.0.0.1:8001`. Use `X-API-Key: cp_test_key` for local `/v1` smoke calls.
+The Public API launcher also accepts `PUBLIC_API_HOST`, `PUBLIC_API_PORT`, and
+`PUBLIC_API_RELOAD`; reload defaults to false so local acceptance can use an
+isolated deterministic process.
 
 MCP smoke:
 

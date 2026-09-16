@@ -31,6 +31,8 @@ def _config(database_url: str) -> Config:
     config = Config(str(ROOT / "db" / "alembic.ini"))
     config.set_main_option("script_location", str(ROOT / "db" / "alembic"))
     config.set_main_option("sqlalchemy.url", database_url)
+    # The smoke owns its test target; inherited runtime settings must not redirect it.
+    config.attributes["database_url_explicit"] = True
     return config
 
 

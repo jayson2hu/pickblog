@@ -16,7 +16,7 @@ from codepick_l3.models import Base  # noqa: E402
 
 
 config = context.config
-if os.getenv("DATABASE_URL"):
+if not config.attributes.get("database_url_explicit", False) and os.getenv("DATABASE_URL"):
     config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

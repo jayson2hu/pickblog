@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from codepick_l3.auth import current_user, has_plan
 from codepick_l3.config import get_settings
-from codepick_l3.provider import get_content_provider
+from codepick_l3.provider import ProviderUnavailable, get_content_provider
 from codepick_l3.repository import get_repository
 from codepick_l3.schemas import User
 
@@ -26,15 +26,28 @@ def companion(payload: CompanionRequest, user: User = Depends(current_user)) -> 
     if detail.status != "COMPLETED":
         raise HTTPException(status_code=404, detail="content not found")
 
-    count = get_repository().increment_companion_usage(user.id, date.today())
+    repository = get_repository()
     settings = get_settings()
     unlimited = has_plan(user, "pro")
+    if not unlimited and repository.get_companion_usage(user.id, date.today()) >= settings.companion_free_daily:
+        raise HTTPException(status_code=429, detail="companion quota exceeded")
+
+    # L2 currently returns a finite JSON chunks list, not a live model stream.
+    # Resolve it before sending SSE headers or charging a successful operation.
+    try:
+        chunks = list(provider.companion(payload.content_id, payload.question))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="content not found") from exc
+    if not chunks or not any(chunk.strip() for chunk in chunks):
+        raise ProviderUnavailable("L2 companion returned no reading aid")
+    count = repository.increment_companion_usage(user.id, date.today())
     if not unlimited and count > settings.companion_free_daily:
         raise HTTPException(status_code=429, detail="companion quota exceeded")
 
     def stream():
-        for chunk in provider.companion(payload.content_id, payload.question):
-            yield f"data: {chunk}\n\n"
+        for chunk in chunks:
+            # Each physical line needs its own SSE data prefix.
+            yield "".join(f"data: {line}\n" for line in chunk.splitlines()) + "\n"
 
     headers = {
         "X-Companion-Limit": str(settings.companion_free_daily),

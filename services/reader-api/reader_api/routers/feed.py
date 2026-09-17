@@ -14,7 +14,8 @@ def feed(
     cursor: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
     sort: str = "published_at",
+    q: str | None = Query(default=None, max_length=200),
 ) -> dict:
-    page = get_content_provider().list(vertical=vertical, cursor=cursor, limit=limit, filters={"sort": sort})
+    page = get_content_provider().list(vertical=vertical, cursor=cursor, limit=limit, filters={"sort": sort, "q": q})
     items = completed_public_items(page.items)
     return Page(items=items, next_cursor=page.next_cursor, total=page.total).model_dump(mode="json")

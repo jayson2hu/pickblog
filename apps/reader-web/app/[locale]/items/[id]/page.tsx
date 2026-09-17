@@ -1,11 +1,14 @@
-import { BilingualBody } from "../../../../components/BilingualBody";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { BilingualBody } from "../../../../components/BilingualBody";
 import { CompanionWidget } from "../../../../components/CompanionWidget";
 import { CoverThumb } from "../../../../components/CoverThumb";
+import { ProvenanceStrip } from "../../../../components/ProvenanceStrip";
 import { ReadingActions } from "../../../../components/ReadingActions";
+import { SaveLaterButton } from "../../../../components/SaveLaterButton";
 import { ScoreExplainer } from "../../../../components/ScoreExplainer";
 import { getItem } from "../../../../lib/api";
+import { formatPublishedDate, readingMinutes, safeExternalUrl, sourceHost } from "../../../../lib/presentation";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
@@ -13,84 +16,45 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, id } = await params;
   const item = await getItem(id);
   if (!item) return {};
-  const title = locale === "zh" ? item.translations.zh?.title ?? item.title : item.title;
-  return {
-    title: `${title} | CodePick`,
-    description: item.summary,
-    alternates: { languages: { en: `/en/items/${item.id}`, zh: `/zh/items/${item.id}` } },
-    openGraph: { title, description: item.summary, url: item.url }
-  };
+  const translationAvailable = item.provenance?.translation_available === true && Boolean(item.translations?.zh);
+  const title = locale === "zh" && translationAvailable ? item.translations.zh.title : item.title;
+  const sourceUrl = safeExternalUrl(item.provenance?.source_url ?? item.url);
+  return { title: `${title} | CodePick`, description: item.summary, alternates: { languages: { en: `/en/items/${item.id}`, zh: `/zh/items/${item.id}` } }, openGraph: { title, description: item.summary, ...(sourceUrl ? { url: sourceUrl } : {}) } };
 }
 
 export default async function ItemPage({ params }: Props) {
   const { locale, id } = await params;
   const item = await getItem(id);
   if (!item) notFound();
-  const translated = locale === "zh" ? item.translations.zh : undefined;
-  const title = translated?.title ?? item.title;
-  const summary = translated?.base_analysis.summary ?? item.base_analysis.summary;
-  const viewpoints = translated?.base_analysis.viewpoints ?? item.base_analysis.viewpoints;
-  const quotes = translated?.base_analysis.quotes ?? item.base_analysis.quotes;
-  const localeDate = new Date(item.published_at).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-US");
+  const isZh = locale === "zh";
+  const translated = item.provenance?.translation_available === true ? item.translations?.zh : undefined;
+  const title = isZh && translated ? translated.title : item.title;
+  const summary = isZh && translated ? translated.base_analysis.summary : item.base_analysis.summary;
+  const viewpoints = isZh && translated ? translated.base_analysis.viewpoints : item.base_analysis.viewpoints;
+  const quotes = isZh && translated ? translated.base_analysis.quotes : item.base_analysis.quotes;
+  const sourceUrl = safeExternalUrl(item.provenance?.source_url ?? item.url);
+  const schema = { "@context": "https://schema.org", "@type": "Article", headline: title, ...(sourceUrl ? { url: sourceUrl } : {}), ...(item.published_at ? { datePublished: item.published_at } : {}) };
 
-  return (
-    <article className="grid gap-8">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Article", headline: title, datePublished: item.published_at })
-        }}
-      />
-      <header className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div>
-          <div className="flex flex-wrap gap-2">
-            <span className="tag">{item.source}</span>
-            <span className="tag">{item.vertical}</span>
-            <span className="tag">{item.read_time_minutes ?? 1} min</span>
-            <span className="tag">{localeDate}</span>
-          </div>
-          <h1 className="page-title">{title}</h1>
-          <p className="page-subtitle">{summary}</p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <a className="primary-button" href={item.url} target="_blank" rel="noopener noreferrer">
-              {locale === "zh" ? "\u6253\u5f00\u539f\u6587" : "Open original"}
-            </a>
-            <a className="secondary-button" href={`/${locale}/pricing`}>
-              {locale === "zh" ? "\u67e5\u770b Pro" : "Compare Pro"}
-            </a>
-          </div>
-        </div>
-        <aside className="self-start">
-          <CoverThumb source={item.source} vertical={item.vertical} thumbnail={item.thumbnail} />
-          <div className="tool-panel mt-4">
-            <p className="metric-label">{locale === "zh" ? "\u5165\u9009\u7406\u7531" : "Why this was picked"}</p>
-            <p className="mt-2 text-sm leading-6 text-muted">{item.reason?.[locale as "en" | "zh"] ?? item.reason?.en}</p>
-          </div>
-        </aside>
-      </header>
-
-      <ScoreExplainer scores={item.scores} locale={locale} />
-      <BilingualBody item={item} locale={locale} />
-
-      <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="tool-panel">
-          <h2 className="section-title">{locale === "zh" ? "\u89c2\u70b9" : "Viewpoints"}</h2>
-          <ul className="mt-4 grid gap-3">
-            {viewpoints.map((point, index) => (
-              <li key={point} className="flex gap-3 rounded-md bg-panel p-3 text-muted">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-white text-xs font-bold text-ink">{index + 1}</span>
-                <span className="leading-7">{point}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <blockquote className="tool-panel border-l-4 border-l-accent text-lg font-semibold leading-8 text-ink">{quotes[0]}</blockquote>
-      </section>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-        <ReadingActions contentId={item.id} locale={locale} />
-        <CompanionWidget contentId={item.id} locale={locale} />
+  return <article className="article-page">
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+    <a className="back-link" href={`/${locale}`}>← {isZh ? "返回今日精选" : "Back to today’s picks"}</a>
+    <header className="article-header">
+      <div className="article-lead">
+        <div className="source-line">{sourceUrl ? <a href={sourceUrl} target="_blank" rel="noopener noreferrer">{item.source || sourceHost(item)}</a> : <span>{item.source || sourceHost(item)}</span>}<span>·</span><span>{sourceHost(item)}</span><span>·</span><span>{formatPublishedDate(item.published_at, locale)}</span><span>·</span><span>{readingMinutes(item)} {isZh ? "分钟" : "min"}</span></div>
+        <ProvenanceStrip item={item} locale={locale} />
+        <h1 className="article-title">{title}</h1>
+        <div className="analysis-summary"><p className="section-eyebrow">{isZh ? "自动摘要" : "Automated summary"}</p><p>{summary}</p></div>
+        <div className="article-actions">{sourceUrl ? <a className="primary-button" href={sourceUrl} target="_blank" rel="noopener noreferrer">{isZh ? "打开发布者原文" : "Open publisher source"}</a> : <span className="tag">{isZh ? "来源链接不可用" : "Source link unavailable"}</span>}<SaveLaterButton item={item} locale={locale} /></div>
       </div>
-    </article>
-  );
+      <aside className="article-aside"><CoverThumb source={item.source} vertical={item.vertical} thumbnail={item.thumbnail} /><div className="trust-note"><p className="metric-label">{isZh ? "阅读提示" : "Reading note"}</p><p>{isZh ? "先用来源链接核对上下文，再把自动摘要和排序信号作为阅读辅助。" : "Verify context at the source, then use the automated summary and ranking signals as reading aids."}</p></div></aside>
+    </header>
+    <BilingualBody item={item} locale={locale} />
+    <section className="reading-section">
+      <div className="section-heading-row"><div><p className="section-eyebrow">{isZh ? "自动生成" : "Automated output"}</p><h2 className="section-title">{isZh ? "分析笔记" : "Analysis notes"}</h2></div><span className="tag">{item.provenance?.reviewed ? (isZh ? "已人工复核" : "Human reviewed") : (isZh ? "未人工复核" : "Not human reviewed")}</span></div>
+      {viewpoints.length ? <ol className="analysis-list">{viewpoints.map((point, index) => <li key={`${point}-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><p>{point}</p></li>)}</ol> : <p className="empty-inline">{isZh ? "当前没有可展示的分析观点。" : "No analysis viewpoints are stored for this item."}</p>}
+      {quotes[0] ? <blockquote className="analysis-quote"><span>{isZh ? "分析摘记" : "Analysis highlight"}</span>{quotes[0]}</blockquote> : null}
+    </section>
+    <ScoreExplainer scores={item.scores} locale={locale} method={item.provenance?.scoring_method} />
+    <div className="article-tools"><ReadingActions contentId={item.id} locale={locale} /><CompanionWidget contentId={item.id} locale={locale} /></div>
+  </article>;
 }

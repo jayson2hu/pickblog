@@ -21,10 +21,14 @@ class ContentSummary(BaseModel):
     url: str
     vertical: str
     status: str = "COMPLETED"
-    published_at: datetime
+    published_at: datetime | None
     thumbnail: str | None = None
     summary: str
     scores: dict[str, int] = Field(default_factory=dict)
+    language: str = "unknown"
+    reading_minutes: int = Field(default=1, ge=1)
+    tags: list[str] = Field(default_factory=list)
+    provenance: dict = Field(default_factory=dict)
 
 
 class ContentDetail(ContentSummary):

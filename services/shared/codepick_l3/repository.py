@@ -37,6 +37,7 @@ class L3Repository(Protocol):
     def north_star(self, user_id: int | None = None) -> dict[str, int | float]: ...
     def save_brief(self, brief: Brief) -> None: ...
     def list_briefs(self) -> list[Brief]: ...
+    def get_companion_usage(self, user_id: int, day: date) -> int: ...
     def increment_companion_usage(self, user_id: int, day: date) -> int: ...
     def set_subscription_plan(self, user_id: int, plan: str) -> None: ...
     def get_subscription_plan(self, user_id: int) -> str: ...
@@ -128,6 +129,9 @@ class InMemoryL3Repository:
 
     def list_briefs(self) -> list[Brief]:
         return list(self.briefs)
+
+    def get_companion_usage(self, user_id: int, day: date) -> int:
+        return self.companion_usage.get((user_id, day), 0)
 
     def increment_companion_usage(self, user_id: int, day: date) -> int:
         key = (user_id, day)
@@ -416,6 +420,13 @@ class SqlAlchemyL3Repository:
                     )
                 )
             return briefs
+        finally:
+            self._finish()
+
+    def get_companion_usage(self, user_id: int, day: date) -> int:
+        try:
+            row = self.session.get(CompanionUsageModel, {"user_id": user_id, "day": day})
+            return row.count if row is not None else 0
         finally:
             self._finish()
 

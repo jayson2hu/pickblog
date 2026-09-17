@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from datetime import UTC, datetime
 from typing import Iterator, Protocol
 import json
 import urllib.error
@@ -79,7 +80,7 @@ class StubContentReadProvider:
         if sort == "score":
             rows.sort(key=lambda item: item.scores.get("quality", 0), reverse=True)
         else:
-            rows.sort(key=lambda item: item.published_at, reverse=True)
+            rows.sort(key=lambda item: item.published_at or datetime.min.replace(tzinfo=UTC), reverse=True)
         page = rows[offset : offset + limit]
         next_cursor = str(offset + limit) if offset + limit < len(rows) else None
         return Page(items=[ContentSummary.model_validate(item.model_dump()) for item in page], next_cursor=next_cursor, total=len(rows))
@@ -129,9 +130,17 @@ class L2HttpContentReadProvider:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
+            if exc.code == 503:
+                try:
+                    body = json.loads(exc.read(16384).decode("utf-8"))
+                    detail = body.get("detail") if isinstance(body, dict) else None
+                    if isinstance(detail, dict) and detail.get("code") == "configuration_error":
+                        raise ProviderConfigurationError("L2 provider configuration is invalid") from exc
+                except (ValueError, UnicodeError):
+                    pass
             if exc.code == 404 and not_found_is_missing:
                 raise KeyError(path) from exc
-            if exc.code == 400:
+            if exc.code in {400, 422}:
                 raise ProviderRequestError(f"L2 provider rejected request: {path}") from exc
             if exc.code in {401, 403}:
                 raise ProviderConfigurationError(
@@ -185,7 +194,7 @@ class L2HttpContentReadProvider:
             raise ProviderUnavailable("L2 recommendation response is invalid") from exc
 
     def companion(self, content_id: str, question: str) -> Iterator[str]:
-        data = self._request_json("/companion", {"content_id": content_id, "question": question})
+        data = self._request_json("/companion", {"content_id": content_id, "question": question}, not_found_is_missing=True)
         chunks = data.get("chunks")
         if not isinstance(chunks, list):
             raise ProviderUnavailable("L2 companion response missing chunks")

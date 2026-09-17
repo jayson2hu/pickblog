@@ -1,5 +1,5 @@
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from codepick_l3.provider import (
     ProviderConfigurationError,
     ProviderRequestError,
@@ -12,6 +12,11 @@ from .routers import v1
 
 
 app = FastAPI(title="CodePick Public API")
+
+
+@app.get("/", include_in_schema=False)
+def index() -> RedirectResponse:
+    return RedirectResponse("/docs", status_code=307)
 
 
 @app.exception_handler(ProviderConfigurationError)

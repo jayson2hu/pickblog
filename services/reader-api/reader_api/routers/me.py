@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from codepick_l3.auth import current_user, has_plan
 from codepick_l3.config import get_settings
-from codepick_l3.repository import get_repository, repository
+from codepick_l3.repository import get_repository
 from codepick_l3.schemas import User
 
 
@@ -37,7 +37,5 @@ def update_audience(payload: AudienceRequest, user: User = Depends(current_user)
 def companion_quota(user: User = Depends(current_user)) -> dict:
     plan = get_repository().get_subscription_plan(user.id)
     unlimited = has_plan(user, "pro")
-    used = 0
-    if hasattr(repository, "companion_usage"):
-        used = repository.companion_usage.get((user.id, date.today()), 0)
+    used = get_repository().get_companion_usage(user.id, date.today())
     return {"used": used, "limit": get_settings().companion_free_daily, "plan": plan, "unlimited": unlimited}

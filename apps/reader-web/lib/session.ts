@@ -1,4 +1,4 @@
-import { apiBase } from "./api";
+import { clientApiUrl } from "./client-api";
 
 export type SessionProfile = {
   email: string;
@@ -10,7 +10,7 @@ export type SessionProfile = {
 export async function getMe(token?: string | null): Promise<SessionProfile | undefined> {
   if (!token) return undefined;
   try {
-    const response = await fetch(`${apiBase}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await fetch(clientApiUrl("/api/me"), { headers: { Authorization: `Bearer ${token}` } });
     if (!response.ok) throw new Error("me unavailable");
     const body = await response.json();
     return {

@@ -6,6 +6,12 @@
 
 L3 implements the reader application and distribution layer with strict separation from L2. During development it uses `StubContentReadProvider`, sandbox billing, and mock email delivery.
 
+## Real-source reading preview (2026-09-17)
+
+[This iteration](docs/2026-09-17-real-content-preview.md) · [Reader UX](apps/reader-web/UX_REDESIGN.md) · [Private preview / remote access](../codepick-docs/REAL_CONTENT_PREVIEW.md)
+
+The private real-source preview disables the L2 stub and demo fallback. Feed search runs upstream before pagination. Reader and Public API roots redirect to `/docs`; the website root redirects to `/zh`. Source/analysis provenance and unavailable translations are explicit. Anonymous saves belong to the current browser; account actions report errors instead of pretending success. Backend acceptance: 166 tests plus smoke, development preflight and isolated SQLite migration round-trip passed.
+
 ## Layout
 
 - `apps/reader-web`: Next.js App Router reader app with i18n routes.

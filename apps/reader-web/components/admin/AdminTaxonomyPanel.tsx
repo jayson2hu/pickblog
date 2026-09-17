@@ -1,8 +1,11 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { clientApiUrl } from "../../lib/client-api";
 
-const apiBase = process.env.NEXT_PUBLIC_READER_API_BASE ?? "http://127.0.0.1:8000";
+
+const requestTimeoutMs = 10000;
+
 
 type Category = { code: string; label?: string; label_en: string; label_zh: string; color_from: string; color_to: string; active?: boolean; sort_order?: number };
 type Audience = { code: string; label?: string; label_en: string; label_zh: string; is_default?: boolean; categories?: string[] };
@@ -77,12 +80,19 @@ export function AdminTaxonomyPanel({ locale }: { locale: string }) {
 
   async function request(path: string, init?: RequestInit) {
     const token = localStorage.getItem("codepick_token");
-    const response = await fetch(`${apiBase}${path}`, {
-      ...init,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}`, ...(init?.headers ?? {}) }
-    });
-    if (!response.ok) throw new Error(await response.text());
-    return response.json();
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMs);
+    try {
+      const response = await fetch(clientApiUrl(path), {
+        ...init,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}`, ...(init?.headers ?? {}) },
+        signal: init?.signal ?? controller.signal
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return response.json();
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
 
   async function loadTaxonomy() {

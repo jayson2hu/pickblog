@@ -1,83 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import { clientApiUrl } from "../lib/client-api";
 
-const apiBase = process.env.NEXT_PUBLIC_READER_API_BASE ?? "http://127.0.0.1:8000";
 
 const copy = {
-  en: {
-    deepRead: "Mark deep read",
-    bookmark: "Bookmark",
-    notInterested: "Not interested",
-    deepReadSaved: "Deep read saved",
-    bookmarkSaved: "Bookmark saved",
-    notInterestedSaved: "Preference saved",
-    localDeepReadSaved: "Local deep read saved",
-    localBookmarkSaved: "Local bookmark saved",
-    localNotInterestedSaved: "Local preference saved",
-    signInRequired: "Sign in required"
-  },
-  zh: {
-    deepRead: "\u6807\u8bb0\u6df1\u8bfb",
-    bookmark: "\u6536\u85cf",
-    notInterested: "\u4e0d\u611f\u5174\u8da3",
-    deepReadSaved: "\u6df1\u8bfb\u5df2\u8bb0\u5f55",
-    bookmarkSaved: "\u6536\u85cf\u5df2\u4fdd\u5b58",
-    notInterestedSaved: "\u504f\u597d\u5df2\u4fdd\u5b58",
-    localDeepReadSaved: "\u672c\u5730\u6df1\u8bfb\u5df2\u8bb0\u5f55",
-    localBookmarkSaved: "\u672c\u5730\u6536\u85cf\u5df2\u4fdd\u5b58",
-    localNotInterestedSaved: "\u672c\u5730\u504f\u597d\u5df2\u4fdd\u5b58",
-    signInRequired: "\u9700\u8981\u767b\u5f55"
-  }
+  en: { deepRead: "Mark as read", bookmark: "Save to account", notInterested: "Less like this", deepReadSaved: "Read status saved to your account.", bookmarkSaved: "Saved to your account.", notInterestedSaved: "Preference saved to your account.", requestFailed: "The account service did not confirm this action. Nothing was reported as saved.", signInRequired: "Use a development session to save account actions. You can still use Save for later on this device." },
+  zh: { deepRead: "标记已读", bookmark: "保存到账户", notInterested: "减少此类内容", deepReadSaved: "已将阅读状态保存到账户。", bookmarkSaved: "已保存到账户。", notInterestedSaved: "已将偏好保存到账户。", requestFailed: "账户服务未确认此操作，本次没有显示为已保存。", signInRequired: "请先使用开发会话保存账户动作；你仍可使用本机“稍后读”。" }
 };
 
 export function ReadingActions({ contentId, locale }: { contentId: string; locale: string }) {
   const t = copy[locale as "en" | "zh"] ?? copy.en;
   const [status, setStatus] = useState("");
 
-  async function postJson(path: string, body: Record<string, unknown>, fallbackStatus: string, successStatus: string) {
+  async function postJson(path: string, body: Record<string, unknown>, successStatus: string) {
     const token = localStorage.getItem("codepick_token");
+    if (!token) { setStatus(t.signInRequired); return; }
+    setStatus("");
     try {
-      const response = await fetch(`${apiBase}${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
-        body: JSON.stringify(body)
-      });
-      if (response.status === 401 || response.status === 403) {
-        setStatus(t.signInRequired);
-        return;
-      }
+      const response = await fetch(clientApiUrl(path), { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+      if (response.status === 401 || response.status === 403) { setStatus(t.signInRequired); return; }
       if (!response.ok) throw new Error("request failed");
       setStatus(successStatus);
-    } catch {
-      setStatus(fallbackStatus);
-    }
+    } catch { setStatus(t.requestFailed); }
   }
 
-  return (
-    <section className="tool-panel">
-      <h2 className="section-title">{locale === "zh" ? "\u9605\u8bfb\u52a8\u4f5c" : "Reading actions"}</h2>
-      <div className="flex flex-wrap gap-3">
-        <button
-          className="secondary-button"
-          onClick={() => postJson("/api/events", { content_id: contentId, type: "deep_read" }, t.localDeepReadSaved, t.deepReadSaved)}
-        >
-          {t.deepRead}
-        </button>
-        <button
-          className="secondary-button"
-          onClick={() => postJson("/api/bookmarks", { content_id: contentId, note: "saved from reader", highlights: [] }, t.localBookmarkSaved, t.bookmarkSaved)}
-        >
-          {t.bookmark}
-        </button>
-        <button
-          className="secondary-button"
-          onClick={() => postJson("/api/events", { content_id: contentId, type: "not_interested" }, t.localNotInterestedSaved, t.notInterestedSaved)}
-        >
-          {t.notInterested}
-        </button>
-      </div>
-      {status ? <p className="mt-3 text-sm text-accent">{status}</p> : null}
-    </section>
-  );
+  return <section className="tool-panel">
+    <div><p className="section-eyebrow">{locale === "zh" ? "账户动作" : "Account actions"}</p><h2 className="section-title">{locale === "zh" ? "同步阅读状态" : "Sync reading state"}</h2><p className="mt-2 text-sm leading-6 text-muted">{locale === "zh" ? "以下动作只在服务端确认后显示成功。" : "These actions only report success after the account service confirms them."}</p></div>
+    <div className="mt-4 flex flex-wrap gap-3">
+      <button className="secondary-button" type="button" onClick={() => postJson("/api/events", { content_id: contentId, type: "deep_read" }, t.deepReadSaved)}>{t.deepRead}</button>
+      <button className="secondary-button" type="button" onClick={() => postJson("/api/bookmarks", { content_id: contentId, note: "saved from reader", highlights: [] }, t.bookmarkSaved)}>{t.bookmark}</button>
+      <button className="secondary-button" type="button" onClick={() => postJson("/api/events", { content_id: contentId, type: "not_interested" }, t.notInterestedSaved)}>{t.notInterested}</button>
+    </div>
+    {status ? <p className="mt-3 text-sm text-accent" role="status">{status}</p> : null}
+  </section>;
 }

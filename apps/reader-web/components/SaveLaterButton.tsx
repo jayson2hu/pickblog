@@ -1,34 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ContentSummary } from "../lib/api";
+import { hasSaved, setSaved } from "../lib/saved";
 
-const key = "cp_saved";
-
-function readSaved(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(key) ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-export function SaveLaterButton({ contentId, locale }: { contentId: string; locale: string }) {
-  const [saved, setSaved] = useState(false);
+export function SaveLaterButton({ item, locale }: { item: ContentSummary; locale: string }) {
+  const [saved, setSavedState] = useState(false);
 
   useEffect(() => {
-    setSaved(readSaved().includes(contentId));
-  }, [contentId]);
+    const refresh = () => setSavedState(hasSaved(item.id));
+    refresh();
+    window.addEventListener("codepick:saved-change", refresh);
+    return () => window.removeEventListener("codepick:saved-change", refresh);
+  }, [item.id]);
 
   function toggle() {
-    const current = readSaved();
-    const next = current.includes(contentId) ? current.filter((id) => id !== contentId) : [contentId, ...current];
-    localStorage.setItem(key, JSON.stringify(next));
-    setSaved(next.includes(contentId));
+    const next = !saved;
+    setSaved(item, next);
+    setSavedState(next);
   }
 
   return (
-    <button className={saved ? "primary-button min-h-10" : "secondary-button min-h-10"} type="button" onClick={toggle}>
-      {saved ? (locale === "zh" ? "已稍后读" : "Saved") : locale === "zh" ? "稍后读" : "Save later"}
+    <button
+      aria-pressed={saved}
+      className={saved ? "primary-button min-h-10" : "secondary-button min-h-10"}
+      title={locale === "zh" ? "保存在当前浏览器，可从收藏页回看" : "Saved in this browser and available from Saved"}
+      type="button"
+      onClick={toggle}
+    >
+      {saved ? (locale === "zh" ? "已存本机" : "Saved locally") : locale === "zh" ? "稍后读" : "Save for later"}
     </button>
   );
 }

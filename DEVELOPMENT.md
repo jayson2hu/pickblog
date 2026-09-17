@@ -20,6 +20,12 @@ python scripts/l3_smoke.py
 python scripts/run_reader_api.py
 ```
 
+## 本轮真实来源预览（2026-09-17）
+
+推荐按 [四服务启动和远程 SSH 访问](../codepick-docs/REAL_CONTENT_PREVIEW.md) 操作，数据来自实际公开采集，不是 L2 stub。用户网站 `13200`、只读 L0 看板 `18000`、Reader API `18100/docs`、L2 API `18230/docs` 均仅监听 loopback。运行配置显式关闭 stub 和 demo fallback，并使用独立 L3 SQLite。
+
+业务改动与结果见 [本轮记录](docs/2026-09-17-real-content-preview.md) 和 [前端设计](apps/reader-web/UX_REDESIGN.md)。模型为提取/规则处理，真实认证、支付和邮件未接入；不能将本机开发登录用于公开服务。
+
 ## 当前运行模式
 
 后端 API 默认在独立开发模式运行，使用 L2 stub、沙箱计费和 mock 邮件。`.env.example` 是配置参考，真实配置自行保存在未跟踪的 `.env` 或进程环境变量中，按各启动入口说明加载。

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { clientApiUrl } from "../lib/client-api";
 
-const apiBase = process.env.NEXT_PUBLIC_READER_API_BASE ?? "http://127.0.0.1:8000";
+
 const requestTimeoutMs = 2500;
 
 type ApiKeyRecord = {
@@ -42,7 +43,7 @@ export function ApiKeyPanel({ locale }: { locale: string }) {
     const token = localStorage.getItem("codepick_token");
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMs);
-    fetch(`${apiBase}/api/api-keys`, { headers: { Authorization: `Bearer ${token ?? ""}` }, signal: controller.signal })
+    fetch(clientApiUrl("/api/api-keys"), { headers: { Authorization: `Bearer ${token ?? ""}` }, signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("api unavailable");
         return response.json();
@@ -57,7 +58,7 @@ export function ApiKeyPanel({ locale }: { locale: string }) {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMs);
     try {
-      const response = await fetch(`${apiBase}/api/api-keys`, {
+      const response = await fetch(clientApiUrl("/api/api-keys"), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
         body: JSON.stringify({ scopes: ["read"] }),
@@ -80,16 +81,33 @@ export function ApiKeyPanel({ locale }: { locale: string }) {
     }
   }
 
-  async function revokeKey(prefix: string) {
-    const token = localStorage.getItem("codepick_token");
-    try {
-      const response = await fetch(`${apiBase}/api/api-keys/${prefix}`, { method: "DELETE", headers: { Authorization: `Bearer ${token ?? ""}` } });
-      if (!response.ok) throw new Error("api unavailable");
-    } catch {
-      saveLocalKeys(localKeys().map((key) => (key.prefix === prefix ? { ...key, status: "revoked" } : key)));
+  async function revokeKey(key: ApiKeyRecord) {
+    const isLocalDemo = key.key?.startsWith("cp_demo_") === true || key.prefix.startsWith("cp_demo_");
+    if (isLocalDemo) {
+      const update = (item: ApiKeyRecord) => (item.prefix === key.prefix ? { ...item, status: "revoked" } : item);
+      saveLocalKeys(localKeys().map(update));
+      setKeys((current) => current.map(update));
+      setStatus(locale === "zh" ? "本地演示 API 密钥已撤销" : "Local demo API key revoked");
+      return;
     }
-    setKeys((current) => current.map((key) => (key.prefix === prefix ? { ...key, status: "revoked" } : key)));
-    setStatus(locale === "zh" ? "API \u5bc6\u94a5\u5df2\u64a4\u9500" : "API key revoked");
+
+    const token = localStorage.getItem("codepick_token");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMs);
+    try {
+      const response = await fetch(clientApiUrl(`/api/api-keys/${key.prefix}`), {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token ?? ""}` },
+        signal: controller.signal
+      });
+      if (!response.ok) throw new Error("api unavailable");
+      setKeys((current) => current.map((item) => (item.prefix === key.prefix ? { ...item, status: "revoked" } : item)));
+      setStatus(locale === "zh" ? "API 密钥已撤销" : "API key revoked");
+    } catch {
+      setStatus(locale === "zh" ? "API 密钥未撤销；Reader API 拒绝了请求，请重试。" : "API key was not revoked. The Reader API rejected the request; try again.");
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
 
   return (
@@ -117,7 +135,7 @@ export function ApiKeyPanel({ locale }: { locale: string }) {
               <strong>{key.prefix}</strong> / {key.status} / {key.daily_quota}/day / {key.rate_limit_rpm}/min
             </span>
             {key.status === "active" ? (
-              <button className="secondary-button min-h-8 px-3 py-1 text-sm" onClick={() => revokeKey(key.prefix)}>
+              <button className="secondary-button min-h-8 px-3 py-1 text-sm" onClick={() => revokeKey(key)}>
                 {locale === "zh" ? "\u64a4\u9500" : "Revoke"}
               </button>
             ) : null}

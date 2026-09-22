@@ -300,3 +300,11 @@ M3 acceptance evidence is recorded in the platform
 `M3_ACCOUNT_ISOLATION.md` document. PostgreSQL validation used a disposable
 database bound only to localhost; real authentication, production billing, real
 email, and production databases were not contacted.
+
+## Quality checks (2026-09-22)
+
+Install `.[dev]`, then run `make lint` and `make test`. Backend CI and
+`make l3-verify` now include Ruff correctness checks. The full verification gate
+fails on E2E timeout, regardless of partial success messages in the log.
+See the [workspace audit](../codepick-docs/PROJECT_AUDIT_2026-09-22.md) for fixes,
+verified results, browser prerequisites, and remaining work.

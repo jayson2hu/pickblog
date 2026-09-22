@@ -24,13 +24,23 @@ def verify_webhook(payload: bytes, signature: str | None) -> None:
         raise HTTPException(status_code=401, detail="invalid webhook signature")
 
 
-def parse_billing_webhook(payload: dict) -> dict:
+def parse_billing_webhook(payload: object) -> dict:
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=422, detail="billing webhook must be an object")
     data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
     custom_data = data.get("custom_data") if isinstance(data.get("custom_data"), dict) else {}
-    user_id = payload.get("user_id") or custom_data.get("user_id")
-    event = payload.get("event") or payload.get("event_type") or data.get("event_type") or "subscription.activated"
-    if user_id is None:
-        raise HTTPException(status_code=422, detail="billing webhook missing user_id")
+    user_id = payload.get("user_id", custom_data.get("user_id"))
+    event = payload.get("event") or payload.get("event_type") or data.get("event_type")
+    if not isinstance(event, str) or not event:
+        raise HTTPException(status_code=422, detail="billing webhook missing or invalid event")
+    if isinstance(user_id, bool) or not isinstance(user_id, (str, int)):
+        raise HTTPException(status_code=422, detail="billing webhook invalid user_id")
+    try:
+        user_id = int(user_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="billing webhook invalid user_id") from exc
+    if user_id <= 0:
+        raise HTTPException(status_code=422, detail="billing webhook invalid user_id")
     if event in ACTIVE_BILLING_EVENTS:
         plan = "pro"
     elif event in CANCELED_BILLING_EVENTS:

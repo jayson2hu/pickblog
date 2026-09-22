@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Header, Request
+from json import JSONDecodeError
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from typing import Literal
 
@@ -22,7 +24,10 @@ def checkout(payload: CheckoutRequest, user: User = Depends(current_user)) -> di
 async def webhook(request: Request, x_paddle_signature: str | None = Header(default=None, alias="X-Paddle-Signature")) -> dict:
     body = await request.body()
     verify_webhook(body, x_paddle_signature)
-    payload = await request.json()
+    try:
+        payload = await request.json()
+    except (JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HTTPException(status_code=422, detail="billing webhook invalid JSON") from exc
     event = parse_billing_webhook(payload)
     get_repository().set_subscription_plan(event["user_id"], event["plan"])
     return {"ok": True, "user_id": event["user_id"], "plan": event["plan"], "event": event["event"]}

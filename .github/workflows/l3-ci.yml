@@ -13,6 +13,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
+      - run: make lint
       - run: python scripts/l3_preflight.py
       - run: python scripts/l3_migration_smoke.py
       - run: python scripts/l3_smoke.py

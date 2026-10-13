@@ -4,6 +4,7 @@ const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const launchOptions = executablePath ? { executablePath } : undefined;
 const port = process.env.PLAYWRIGHT_PORT ?? "3100";
 const baseURL = `http://127.0.0.1:${port}`;
+const serverScript = process.env.PLAYWRIGHT_SERVER_MODE === "production" ? "start" : "dev";
 
 export default defineConfig({
   testDir: "./tests",
@@ -18,7 +19,7 @@ export default defineConfig({
     process.env.PLAYWRIGHT_EXTERNAL_SERVER === "1"
       ? undefined
       : {
-          command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+          command: `npm run ${serverScript} -- --hostname 127.0.0.1 --port ${port}`,
           url: `${baseURL}/en`,
           reuseExistingServer: false,
           env: { ...process.env, READER_USE_DEMO_FALLBACK: "true" },

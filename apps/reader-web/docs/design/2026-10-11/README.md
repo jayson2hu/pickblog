@@ -43,3 +43,4 @@ READER_USE_DEMO_FALLBACK=true npm run dev -- --hostname 127.0.0.1 --port 3100
 - `.venv/bin/python -m ruff check .` 通过。
 - `.venv/bin/python scripts/l3_smoke.py` 通过：200 项后端测试及 brief worker 冒烟验证全部通过。
 - 管理页失败提示回归测试明确模拟 `/api/me` 的失败响应，并等待管理员演示初始化完成后提交，避免初始化提示覆盖保存结果。桌面与手机各重复运行 5 次，共 10 次全部通过。
+- 远程运行曾出现 Next.js 开发服务器 JSON 解析异常。CI 的 E2E 改用先前 `npm run build` 生成的生产构建，通过 `PLAYWRIGHT_SERVER_MODE=production` 启动；本地默认仍使用开发服务器。隔离生产构建验证完成，44 项浏览器测试全部通过（13.8s）。

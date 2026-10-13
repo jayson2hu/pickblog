@@ -8,7 +8,7 @@ import { fallbackTaxonomyFromFeed, getTaxonomy } from "../../lib/taxonomy";
 const copy = {
   en: {
     title: "Public picks", kicker: "Today’s engineering reading",
-    subtitle: "A small queue of public-source engineering articles, with the source and automated processing method visible before you commit.",
+    subtitle: "Good engineering starts with good reading. Explore ideas, keep what matters.",
     search: "Search titles and summaries", searchButton: "Search", queue: "Reading queue",
     queueNote: "Open the source for the publisher’s full text. CodePick summaries and scores are processing aids, not editorial endorsements.",
     empty: "No public picks match this view.", emptyHelp: "Try a broader search or reset the filters. If the queue remains empty, the source pipeline may not have completed new items yet.",
@@ -16,7 +16,7 @@ const copy = {
   },
   zh: {
     title: "公共精选", kicker: "今天的工程阅读",
-    subtitle: "少而明确的公开来源技术文章队列；在打开之前即可看到来源、自动处理方式和复核状态。",
+    subtitle: "从技术世界的喧嚣中，找到值得细读的思考。探索新知，留下启发。",
     search: "搜索标题和摘要", searchButton: "搜索", queue: "阅读队列",
     queueNote: "发布者原文以来源链接为准。CodePick 摘要与评分用于辅助筛选，不代表编辑背书。",
     empty: "当前视图没有匹配的公开精选。", emptyHelp: "可以放宽搜索或重置筛选。如果仍为空，可能是来源管道尚未完成新内容。",
@@ -42,7 +42,7 @@ export default async function Home({ params, searchParams }: {
   return (
     <section className="reading-home">
       <header className="editorial-header">
-        <div><p className="page-kicker">{t.kicker}</p><h1 className="page-title">{t.title}</h1><p className="page-subtitle">{t.subtitle}</p></div>
+        <div><p className="page-kicker"><span aria-hidden="true">THE READING ROOM / </span>{t.kicker}</p><h1 className="page-title">{t.title}</h1><p className="page-subtitle">{t.subtitle}</p></div>
         <div className="trust-legend" aria-label={locale === "zh" ? "内容可信说明" : "Content trust guide"}>
           <span><i className="status-dot status-source" aria-hidden="true" />{t.source}</span>
           <span><i className="status-dot status-analysis" aria-hidden="true" />{t.analysis}</span>
@@ -51,6 +51,7 @@ export default async function Home({ params, searchParams }: {
       </header>
       <form className="search-bar" action={`/${locale}`} role="search">
         <label className="sr-only" htmlFor="feed-search">{t.search}</label>
+        <span className="search-symbol" aria-hidden="true">⌕</span>
         <input id="feed-search" name="q" type="search" defaultValue={currentQuery} placeholder={t.search} />
         {currentVertical ? <input name="vertical" type="hidden" value={currentVertical} /> : null}
         {currentSort !== "recommended" ? <input name="sort" type="hidden" value={currentSort} /> : null}
@@ -58,11 +59,12 @@ export default async function Home({ params, searchParams }: {
       </form>
       <div className="reader-layout">
         <div className="grid min-w-0 gap-4">
-          <div className="queue-heading"><div><h2 className="section-title">{t.queue}</h2><p className="mt-1 text-sm leading-6 text-muted">{t.queueNote}</p></div>{typeof page.total === "number" ? <span className="tag">{page.total}</span> : null}</div>
+          <div className="queue-heading"><div><h2 className="section-title">{t.queue}</h2></div>{typeof page.total === "number" ? <span className="tag">{page.total}</span> : null}</div>
           <FeedFilters locale={locale} categories={taxonomy.categories} currentVertical={currentVertical} currentSort={currentSort} currentQuery={currentQuery} />
           {top ? <ContentCard item={top} locale={locale} featured /> : null}
           {rest.map((item) => <ContentCard key={item.id} item={item} locale={locale} />)}
           {!top ? <section className="state-panel text-center"><h2 className="section-title">{t.empty}</h2><p className="mt-3 text-sm leading-6 text-muted">{t.emptyHelp}</p><a className="secondary-button mt-5" href={`/${locale}`}>{t.reset}</a></section> : null}
+          <p className="queue-note">{t.queueNote}</p>
           <LoadMore locale={locale} initialCursor={page.next_cursor} vertical={currentVertical} sort={currentSort} query={currentQuery} />
         </div>
         <Sidebar locale={locale} />

@@ -266,6 +266,9 @@ test("admin taxonomy shell manages categories and audiences", async ({ page }) =
     localStorage.setItem("codepick_token", "demo.admin.token");
     localStorage.setItem("codepick_is_admin", "true");
   });
+  await page.route("**/api/me", async (route) => {
+    await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "temporarily unavailable" }) });
+  });
   await page.route("**/api/admin/categories", async (route) => {
     await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "temporarily unavailable" }) });
   });
@@ -275,6 +278,7 @@ test("admin taxonomy shell manages categories and audiences", async ({ page }) =
   await page.goto("/en/admin");
   await expect(page.getByRole("heading", { name: "Categories and audiences" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Category manager" })).toBeVisible();
+  await expect(page.getByText("Local demo: sign in as admin and connect Reader API to save.")).toBeVisible();
   await page.getByLabel("Category code").fill("ops");
   await page.getByRole("button", { name: "Add category" }).click();
   await expect(page.getByText("Category save failed")).toBeVisible();

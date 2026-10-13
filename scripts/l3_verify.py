@@ -6,7 +6,6 @@ import shutil
 import sys
 import time
 import urllib.request
-import re
 from pathlib import Path
 
 from path_bootstrap import pythonpath_env
@@ -68,13 +67,6 @@ def run_reader_web_e2e() -> None:
             output = stdout.decode("utf-8", errors="replace")
         elif isinstance(stdout, str):
             output = stdout
-        ok_count = output.count("  ok ")
-        passed_match = re.search(r"(\d+)\s+passed", output)
-        passed_count = int(passed_match.group(1)) if passed_match else 0
-        if ok_count >= 26 or passed_count >= 26:
-            write_output(output)
-            print(f"Playwright completed successfully; accepted a stuck Windows npm/dev-server wrapper after {max(ok_count, passed_count)} passed tests.", flush=True)
-            return
         write_output(output)
         raise
     finally:
@@ -120,6 +112,7 @@ def npm_args(*args: str) -> list[str]:
 
 def main() -> None:
     try:
+        run([sys.executable, "-m", "ruff", "check", "."])
         run([sys.executable, str(ROOT / "scripts" / "l3_preflight.py")])
         run([sys.executable, str(ROOT / "scripts" / "l3_migration_smoke.py")])
         run([sys.executable, str(ROOT / "scripts" / "l3_smoke.py")])

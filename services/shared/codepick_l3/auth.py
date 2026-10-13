@@ -31,16 +31,18 @@ def current_user(authorization: str | None = Header(default=None)) -> User:
         payload = jwt.decode(token, get_settings().jwt_secret, algorithms=[ALGORITHM])
         subject = int(payload["sub"])
         email = payload["email"]
-        if not isinstance(email, str) or not email.strip() or "exp" not in payload:
+        if subject <= 0 or not isinstance(email, str) or not email.strip() or "exp" not in payload:
             raise ValueError("missing required token claims")
-    except (JWTError, KeyError, TypeError, ValueError) as exc:
+        return User(
+            id=subject,
+            email=email,
+            plan=payload.get("plan", "free"),
+            locale=payload.get("locale", "en"),
+        )
+    except (JWTError, KeyError, TypeError, ValueError, OverflowError) as exc:
+        # Pydantic ValidationError is a ValueError; invalid optional claims
+        # must share the same authentication boundary as required claims.
         raise HTTPException(status_code=401, detail="invalid bearer token") from exc
-    return User(
-        id=subject,
-        email=email,
-        plan=payload.get("plan", "free"),
-        locale=payload.get("locale", "en"),
-    )
 
 
 def optional_user(authorization: str | None = Header(default=None)) -> User | None:

@@ -1,4 +1,4 @@
-.PHONY: l3-smoke l3-migration-smoke l3-clean l3-preflight l3-preflight-final l3-final-probe l3-verify test reader-api public-api mcp-smoke brief-worker brief-enqueue-public infra-up infra-status infra-down migrate
+.PHONY: lint l3-smoke l3-migration-smoke l3-clean l3-preflight l3-preflight-final l3-final-probe l3-verify test reader-api public-api mcp-smoke brief-worker brief-enqueue-public infra-up infra-status infra-down migrate
 
 test:
 	python -m pytest -c pytest.ini tests
@@ -50,3 +50,6 @@ infra-down:
 
 migrate:
 	alembic -c db/alembic.ini upgrade head
+
+lint:
+	python -m ruff check .

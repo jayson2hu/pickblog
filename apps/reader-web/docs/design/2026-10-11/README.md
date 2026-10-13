@@ -35,3 +35,10 @@ READER_USE_DEMO_FALLBACK=true npm run dev -- --hostname 127.0.0.1 --port 3100
 ```
 
 打开 `http://127.0.0.1:3100/zh`。连接真实服务时移除该样例开关，并按项目 API 配置启动服务。
+
+## 合并前补充验证 · 2026-10-13
+
+远程 CI 发现中文编码回归测试仍断言旧首页说明。已将断言更新为新版文案，保留中文字符及乱码检查。
+
+- `.venv/bin/python -m ruff check .` 通过。
+- `.venv/bin/python scripts/l3_smoke.py` 通过：200 项后端测试及 brief worker 冒烟验证全部通过。

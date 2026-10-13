@@ -2117,7 +2117,7 @@ def test_reader_web_source_has_expected_utf8_copy() -> None:
         "\u4e2d\u6587",
         "\u65e9\u62a5",
         "\u516c\u5171\u7cbe\u9009",
-        "少而明确的公开来源技术文章队列；在打开之前即可看到来源、自动处理方式和复核状态。",
+        "从技术世界的喧嚣中，找到值得细读的思考。探索新知，留下启发。",
         "\u5f02\u6b65 Python \u667a\u80fd\u4f53\u7684\u8fd0\u884c\u6210\u672c\u6b63\u5728\u4e0b\u964d",
         "\u516d\u7ef4\u8bc4\u5206",
         "阅读伴侣",

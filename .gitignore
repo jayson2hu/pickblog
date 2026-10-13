@@ -6,6 +6,7 @@ __pycache__/
 
 node_modules/
 .next/
+.next-public-preview/
 test-results/
 playwright-report/
 
